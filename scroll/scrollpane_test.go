@@ -8,7 +8,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/framegrace/texelui/core"
-	"github.com/framegrace/texelui/core"
 )
 
 // mockWidget is a test widget for ScrollPane testing.

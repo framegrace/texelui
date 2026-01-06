@@ -17,7 +17,7 @@ TexelUI applications can run in two modes:
 │           │                                │                    │
 │           ▼                                ▼                    │
 │  ┌─────────────────┐              ┌─────────────────┐          │
-│  │    devshell     │              │    UIApp        │          │
+│  │    standalone     │              │    UIApp        │          │
 │  │   (standalone)  │              │   (adapter)     │          │
 │  └────────┬────────┘              └────────┬────────┘          │
 │           │                                │                    │
@@ -89,13 +89,13 @@ func createUI() *core.UIManager {
 ```go
 func main() {
     ui := createUI()
-    devshell.Run(ui)
+    standalone.RunUI(ui)
 }
 ```
 
 **TexelApp:**
 ```go
-func New() texel.App {
+func New() core.App {
     ui := createUI()
     return adapter.NewUIApp(ui, nil)
 }
@@ -105,7 +105,7 @@ func New() texel.App {
 
 | Topic | Description |
 |-------|-------------|
-| [Standalone Mode](/texelui/integration/standalone-mode.md) | Running with devshell |
+| [Standalone Mode](/texelui/integration/standalone-mode.md) | Running with standalone |
 | [TexelApp Mode](/texelui/integration/texelapp-mode.md) | Integration with Texelation |
 | [Theme Integration](/texelui/integration/theme-integration.md) | Using Texelation themes |
 | [TexelUI CLI](/texelui/integration/texelui-cli.md) | Driving a TexelUI form from Bash |
@@ -116,7 +116,7 @@ func New() texel.App {
 
 ```
 ┌───────────────────────────────────────────┐
-│                  devshell                  │
+│                  standalone                  │
 │  ┌─────────────────────────────────────┐  │
 │  │           UIManager                  │  │
 │  │  ┌─────────┐ ┌─────────┐ ┌───────┐ │  │
@@ -170,20 +170,20 @@ func New() texel.App {
 | **Focus** | Always has focus | Managed by desktop |
 | **Resize** | Terminal resize events | Pane resize events |
 | **Lifecycle** | Main function | App interface methods |
-| **Dependencies** | Just devshell | Full Texelation |
+| **Dependencies** | Just standalone | Full Texelation |
 
 ## Migration Path
 
 Start standalone for development, then wrap for Texelation:
 
-1. **Develop standalone** - Rapid iteration with devshell
+1. **Develop standalone** - Rapid iteration with standalone
 2. **Create adapter** - Wrap UIManager in UIApp
 3. **Register with Texelation** - Add to app registry
 4. **Test in desktop** - Verify resize, focus, theming
 
 ## See Also
 
-- [Standalone Mode](/texelui/integration/standalone-mode.md) - devshell details
+- [Standalone Mode](/texelui/integration/standalone-mode.md) - standalone details
 - [TexelApp Mode](/texelui/integration/texelapp-mode.md) - adapter details
 - [Theme Integration](/texelui/integration/theme-integration.md) - theming
 - [TexelUI CLI](/texelui/integration/texelui-cli.md) - Bash-driven UI example

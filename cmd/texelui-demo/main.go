@@ -3,12 +3,18 @@ package main
 import (
 	"flag"
 	"log"
-	"texelation/internal/devshell"
+
+	"github.com/framegrace/texelui/apps/texelui-demo"
+	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/standalone"
 )
 
 func main() {
 	flag.Parse()
-	if err := devshell.RunApp("texelui-demo", flag.Args()); err != nil {
+	standalone.Register("texelui-demo", func(args []string) (core.App, error) {
+		return texeluidemo.New(), nil
+	})
+	if err := standalone.RunApp("texelui-demo", flag.Args()); err != nil {
 		log.Fatalf("texelui-demo: %v", err)
 	}
 }

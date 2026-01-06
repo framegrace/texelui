@@ -28,7 +28,7 @@ type UIManager struct {
 	bgStyle  tcell.Style
 	notifier chan<- bool
 	focused  Widget
-	buf      [][]texel.Cell
+	buf      [][]Cell
 	dirty    []Rect
 	lay      Layout
 	capture  Widget
@@ -777,11 +777,11 @@ func (u *UIManager) ensureBufferLocked() {
 	if u.buf != nil && len(u.buf) == h && (h == 0 || len(u.buf[0]) == w) {
 		return
 	}
-	u.buf = make([][]texel.Cell, h)
+	u.buf = make([][]Cell, h)
 	for y := 0; y < h; y++ {
-		row := make([]texel.Cell, w)
+		row := make([]Cell, w)
 		for x := 0; x < w; x++ {
-			row[x] = texel.Cell{Ch: ' ', Style: u.bgStyle}
+			row[x] = Cell{Ch: ' ', Style: u.bgStyle}
 		}
 		u.buf[y] = row
 	}
@@ -806,7 +806,7 @@ func (u *UIManager) sortedWidgetsLocked() []Widget {
 }
 
 // Render updates dirty regions and returns the framebuffer.
-func (u *UIManager) Render() [][]texel.Cell {
+func (u *UIManager) Render() [][]Cell {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 

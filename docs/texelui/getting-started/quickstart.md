@@ -51,7 +51,7 @@ import (
 	"log"
 
 	"github.com/gdamore/tcell/v2"
-	"texelation/internal/devshell"
+	"github.com/framegrace/texelui/standalone"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/adapter"
 	"github.com/framegrace/texelui/core"
@@ -59,8 +59,8 @@ import (
 )
 
 func main() {
-	// Register our app with the devshell runner
-	err := devshell.Run(func(args []string) (texel.App, error) {
+	// Register our app with the standalone runner
+	err := standalone.Run(func(args []string) (core.App, error) {
 		return NewLoginApp(), nil
 	}, nil)
 
@@ -70,7 +70,7 @@ func main() {
 }
 
 // NewLoginApp creates the login form application
-func NewLoginApp() texel.App {
+func NewLoginApp() core.App {
 	// Create the UIManager - the root of our widget tree
 	ui := core.NewUIManager()
 
@@ -233,7 +233,7 @@ row.AddFlexChild(input)
 ### 5. The Adapter Pattern
 
 ```go
-// UIApp adapts UIManager to the texel.App interface
+// UIApp adapts UIManager to the core.App interface
 app := adapter.NewUIApp("Title", ui)
 
 // OnResize lets you handle window size changes
@@ -244,15 +244,15 @@ app.OnResize(func(w, h int) {
 })
 ```
 
-### 6. Running with devshell
+### 6. Running with standalone
 
 ```go
-devshell.Run(func(args []string) (texel.App, error) {
+standalone.Run(func(args []string) (core.App, error) {
     return NewLoginApp(), nil
 }, nil)
 ```
 
-The `devshell.Run` function:
+The `standalone.Run` function:
 - Creates a terminal screen
 - Handles the event loop
 - Routes events to your app

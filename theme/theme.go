@@ -53,6 +53,10 @@ func Get() Config {
 		
 		// Apply standard semantics (Catppuccin defaults)
 		instance.LoadStandardSemantics()
+
+		if loadErr == nil {
+			ApplyDefaults(instance)
+		}
 	})
 	
 	mu.RLock()

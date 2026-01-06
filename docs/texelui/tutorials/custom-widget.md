@@ -371,7 +371,7 @@ func (p *ProgressBar) Draw(painter *core.Painter) {
 
 ```go
 func main() {
-	err := devshell.Run(func(args []string) (texel.App, error) {
+	err := standalone.Run(func(args []string) (core.App, error) {
 		ui := core.NewUIManager()
 
 		// Create progress bar

@@ -3,7 +3,7 @@ set -euo pipefail
 
 texelui_cmd=(./bin/texelui)
 if [[ ! -x "${texelui_cmd[0]}" ]]; then
-  echo "Missing ${texelui_cmd[0]}. Run: make build-apps" >&2
+  echo "Missing ${texelui_cmd[0]}. Run: go build -o bin/texelui ./cmd/texelui" >&2
   exit 1
 fi
 

@@ -29,7 +29,7 @@ The `adapter.UIApp` bridges UIManager to Texelation's App interface:
 ```go
 import "github.com/framegrace/texelui/adapter"
 
-func New() texel.App {
+func New() core.App {
     ui := core.NewUIManager()
     // ... add widgets ...
     return adapter.NewUIApp(ui, nil)
@@ -51,7 +51,7 @@ import (
 )
 
 // New creates a new instance of the app
-func New() texel.App {
+func New() core.App {
     ui := core.NewUIManager()
     ui.SetLayout(layout.NewVBox(1))
 
@@ -105,7 +105,7 @@ func main() {
 
 ## The App Interface
 
-UIApp implements `texel.App`:
+UIApp implements `core.App`:
 
 ```go
 type App interface {
@@ -171,7 +171,7 @@ return adapter.NewUIApp(ui, config)
 
 ```
 1. Texelation creates pane
-2. App factory called: New() → texel.App
+2. App factory called: New() → core.App
 3. App.Resize(cols, rows) with pane dimensions
 4. App.Run() called
 5. App.Render() called for initial display
@@ -317,7 +317,7 @@ func CreateUI() *core.UIManager {
 }
 
 // New creates a TexelApp
-func New() texel.App {
+func New() core.App {
     return adapter.NewUIApp(CreateUI(), nil)
 }
 ```
@@ -327,12 +327,12 @@ func New() texel.App {
 package main
 
 import (
-    "texelation/internal/devshell"
+    "github.com/framegrace/texelui/standalone"
     "texelation/apps/myapp"
 )
 
 func main() {
-    devshell.Run(myapp.CreateUI())
+    standalone.RunUI(myapp.CreateUI())
 }
 ```
 

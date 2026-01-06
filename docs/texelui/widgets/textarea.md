@@ -54,7 +54,7 @@ import (
     "log"
 
     "github.com/gdamore/tcell/v2"
-    "texelation/internal/devshell"
+    "github.com/framegrace/texelui/standalone"
     "github.com/framegrace/texelui/core"
     "github.com/framegrace/texelui/adapter"
     "github.com/framegrace/texelui/core"
@@ -62,7 +62,7 @@ import (
 )
 
 func main() {
-    err := devshell.Run(func(args []string) (texel.App, error) {
+    err := standalone.Run(func(args []string) (core.App, error) {
         ui := core.NewUIManager()
 
         // Create a VBox layout

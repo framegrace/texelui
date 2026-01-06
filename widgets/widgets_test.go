@@ -3,7 +3,6 @@ package widgets
 import (
 	"testing"
 	"github.com/framegrace/texelui/core"
-	"github.com/framegrace/texelui/core"
 
 	"github.com/gdamore/tcell/v2"
 )

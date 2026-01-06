@@ -10,7 +10,6 @@ package texeluidemo
 import (
 	"fmt"
 
-	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/adapter"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/scroll"

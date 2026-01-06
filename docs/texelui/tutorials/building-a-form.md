@@ -62,7 +62,7 @@ package main
 import (
 	"log"
 
-	"texelation/internal/devshell"
+	"github.com/framegrace/texelui/standalone"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/adapter"
 	"github.com/framegrace/texelui/core"
@@ -70,7 +70,7 @@ import (
 )
 
 func main() {
-	err := devshell.Run(func(args []string) (texel.App, error) {
+	err := standalone.Run(func(args []string) (core.App, error) {
 		return NewRegistrationForm(), nil
 	}, nil)
 	if err != nil {
@@ -78,7 +78,7 @@ func main() {
 	}
 }
 
-func NewRegistrationForm() texel.App {
+func NewRegistrationForm() core.App {
 	ui := core.NewUIManager()
 
 	// We'll add the form here
@@ -92,7 +92,7 @@ func NewRegistrationForm() texel.App {
 The Form widget automatically handles label alignment and focus highlighting:
 
 ```go
-func NewRegistrationForm() texel.App {
+func NewRegistrationForm() core.App {
 	ui := core.NewUIManager()
 
 	// Create the Form widget
@@ -273,7 +273,7 @@ import (
 	"log"
 	"strings"
 
-	"texelation/internal/devshell"
+	"github.com/framegrace/texelui/standalone"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/adapter"
 	"github.com/framegrace/texelui/core"
@@ -281,7 +281,7 @@ import (
 )
 
 func main() {
-	err := devshell.Run(func(args []string) (texel.App, error) {
+	err := standalone.Run(func(args []string) (core.App, error) {
 		return NewRegistrationForm(), nil
 	}, nil)
 	if err != nil {
@@ -289,7 +289,7 @@ func main() {
 	}
 }
 
-func NewRegistrationForm() texel.App {
+func NewRegistrationForm() core.App {
 	ui := core.NewUIManager()
 
 	// Create Form widget

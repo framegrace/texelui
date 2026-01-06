@@ -238,7 +238,7 @@ type FocusContainer interface {
 
 ## Texelation Integration Interfaces
 
-### texel.App
+### core.App
 
 The interface for Texelation applications.
 

@@ -1,6 +1,6 @@
 # Installation
 
-This guide covers how to install and build TexelUI as part of the Texelation project.
+This guide covers how to install and build TexelUI as a standalone library and toolkit.
 
 ## Prerequisites
 
@@ -18,24 +18,18 @@ This guide covers how to install and build TexelUI as part of the Texelation pro
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/texelation.git
-cd texelation
+git clone https://github.com/your-org/texelui.git
+cd texelui
 ```
 
 ### 2. Build the Project
 
-Using Make (recommended):
+Using Go directly:
 ```bash
-# Build core binaries (server, client)
-make build
+# Build the TexelUI CLI
+go build -o bin/texelui ./cmd/texelui
 
-# Build all app binaries including texelui-demo
-make build-apps
-```
-
-Or using Go directly:
-```bash
-# Build texelui-demo standalone app
+# Build the demo app
 go build -o bin/texelui-demo ./cmd/texelui-demo
 ```
 
@@ -84,7 +78,7 @@ texelui/
 ├── layout/          # Layout managers
 │   ├── vbox.go
 │   └── hbox.go
-├── adapter/         # texel.App adapter
+├── adapter/         # core.App adapter
 │   └── texel_app.go
 └── color/           # Color utilities (OKLCH, etc.)
 ```
@@ -121,7 +115,7 @@ go test -v ./texelui/...
 ### Build Errors
 
 **"package github.com/framegrace/texelui/... not found"**
-- Ensure you're in the texelation root directory
+- Ensure you're in the texelui root directory
 - Run `go mod tidy` to update dependencies
 
 **"tcell: terminal does not support required features"**

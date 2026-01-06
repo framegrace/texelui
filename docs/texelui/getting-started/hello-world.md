@@ -10,7 +10,7 @@ package main
 import (
 	"log"
 
-	"texelation/internal/devshell"
+	"github.com/framegrace/texelui/standalone"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/adapter"
 	"github.com/framegrace/texelui/core"
@@ -18,13 +18,13 @@ import (
 )
 
 func main() {
-	err := devshell.Run(createApp, nil)
+	err := standalone.Run(createApp)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func createApp(args []string) (texel.App, error) {
+func createApp(args []string) (core.App, error) {
 	// 1. Create the UI manager
 	ui := core.NewUIManager()
 
@@ -69,17 +69,17 @@ func createApp(args []string) (texel.App, error) {
 import (
 	"log"
 
-	"texelation/internal/devshell"           // Standalone runner
+	"github.com/framegrace/texelui/standalone"           // Standalone runner
 	"github.com/framegrace/texelui/core"                       // Core texel types
-	"github.com/framegrace/texelui/adapter"             // texel.App adapter
+	"github.com/framegrace/texelui/adapter"             // core.App adapter
 	"github.com/framegrace/texelui/core"                // UIManager, Painter, etc.
 	"github.com/framegrace/texelui/widgets"             // Built-in widgets
 )
 ```
 
-**devshell** - Provides standalone execution without needing the Texelation server
-**texel** - Defines the `texel.App` interface that all apps implement
-**adapter** - Bridges TexelUI's `UIManager` to the `texel.App` interface
+**standalone** - Provides standalone execution without needing the Texelation server
+**texel** - Defines the `core.App` interface that all apps implement
+**adapter** - Bridges TexelUI's `UIManager` to the `core.App` interface
 **core** - Core TexelUI types: `UIManager`, `Widget`, `Painter`, `Rect`
 **widgets** - Pre-built widgets like `Label`, `Button`, `Input`, `VBox`, `HBox`
 
@@ -87,14 +87,14 @@ import (
 
 ```go
 func main() {
-	err := devshell.Run(createApp, nil)
+	err := standalone.Run(createApp)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 ```
 
-`devshell.Run` handles:
+`standalone.Run` handles:
 1. Creating a terminal screen (via tcell)
 2. Setting up mouse and paste support
 3. Running the main event loop
@@ -200,11 +200,11 @@ app.OnResize(func(w, h int) {
 return app, nil
 ```
 
-`UIApp` adapts `UIManager` to the `texel.App` interface:
+`UIApp` adapts `UIManager` to the `core.App` interface:
 
 ```
 ┌─────────────────────────────────────────┐
-│              texel.App                  │
+│              core.App                  │
 │  (Run, Stop, Resize, Render, HandleKey) │
 └────────────────┬────────────────────────┘
                  │

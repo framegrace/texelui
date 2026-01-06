@@ -23,7 +23,7 @@ TexelUI applications can run in two different modes. This guide explains both an
 │           ▼                                ▼                    │
 │  ┌─────────────────┐              ┌─────────────────┐          │
 │  │  Standalone     │              │  TexelApp Mode  │          │
-│  │  (devshell)     │              │  (Texelation)   │          │
+│  │  (standalone)     │              │  (Texelation)   │          │
 │  │                 │              │                 │          │
 │  │  • Direct tcell │              │  • Managed pane │          │
 │  │  • Single app   │              │  • Multi-app    │          │
@@ -50,7 +50,7 @@ package main
 
 import (
 	"log"
-	"texelation/internal/devshell"
+	"github.com/framegrace/texelui/standalone"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/adapter"
 	"github.com/framegrace/texelui/core"
@@ -58,14 +58,14 @@ import (
 )
 
 func main() {
-	// devshell.Run creates a tcell screen and runs the event loop
-	err := devshell.Run(createApp, nil)
+	// standalone.Run creates a tcell screen and runs the event loop
+	err := standalone.Run(createApp)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func createApp(args []string) (texel.App, error) {
+func createApp(args []string) (core.App, error) {
 	ui := core.NewUIManager()
 
 	btn := widgets.NewButton(10, 5, 0, 0, "Hello!")
@@ -83,7 +83,7 @@ func createApp(args []string) (texel.App, error) {
 │              Your Terminal              │
 │                                         │
 │  ┌─────────────────────────────────┐   │
-│  │          devshell.Run           │   │
+│  │          standalone.Run           │   │
 │  │                                 │   │
 │  │  1. Creates tcell.Screen       │   │
 │  │  2. Enables mouse/paste        │   │
@@ -113,24 +113,22 @@ go build -o bin/my-app ./cmd/my-app
 go run ./cmd/my-app
 ```
 
-### Registering with devshell
+### Registering with standalone
 
-For reusable standalone apps, register with the devshell registry:
+For reusable standalone apps, register with the standalone registry:
 
 ```go
-// In internal/devshell/runner.go
-var registry = map[string]Builder{
-	"my-app": func(args []string) (texel.App, error) {
-		return NewMyApp(args), nil
-	},
-}
+// In init() or main
+standalone.Register("my-app", func(args []string) (core.App, error) {
+	return NewMyApp(args), nil
+})
 ```
 
 Then call from main:
 
 ```go
 func main() {
-	err := devshell.RunApp("my-app", os.Args[1:])
+	err := standalone.RunApp("my-app", os.Args[1:])
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -161,7 +159,7 @@ import (
 )
 
 // New creates the TexelApp
-func New() texel.App {
+func New() core.App {
 	ui := core.NewUIManager()
 
 	btn := widgets.NewButton(10, 5, 0, 0, "Hello!")
@@ -184,7 +182,7 @@ Register your app in the server:
 
 ```go
 // In cmd/texel-server/main.go
-apps := map[string]func() texel.App{
+apps := map[string]func() core.App{
 	"my-app": myapp.New,
 	// ... other apps
 }
@@ -268,7 +266,7 @@ import (
 )
 
 // New creates the app (works for both modes)
-func New() texel.App {
+func New() core.App {
 	ui := core.NewUIManager()
 
 	// Build UI
@@ -299,11 +297,11 @@ package main
 import (
 	"log"
 	"texelation/apps/myapp"
-	"texelation/internal/devshell"
+	"github.com/framegrace/texelui/standalone"
 )
 
 func main() {
-	err := devshell.Run(func(args []string) (texel.App, error) {
+	err := standalone.Run(func(args []string) (core.App, error) {
 		return myapp.New(), nil
 	}, nil)
 	if err != nil {

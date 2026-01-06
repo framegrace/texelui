@@ -19,13 +19,12 @@ Welcome to TexelUI! This section will help you get up and running quickly.
 If you're in a hurry, here's the fastest path to a working app:
 
 ```bash
-# Clone and build
-git clone https://github.com/your-org/texelation.git
-cd texelation
-make build-apps
+# Clone and run
+git clone https://github.com/your-org/texelui.git
+cd texelui
 
 # Run the demo
-./bin/texelui-demo
+go run ./cmd/texelui-demo
 ```
 
 You should see a tabbed interface with input fields, buttons, and other widgets. Use Tab to navigate between elements.

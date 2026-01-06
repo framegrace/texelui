@@ -373,7 +373,7 @@ tabbar.ActiveStyle tcell.Style
 ```go
 func NewUIApp(title string, ui *core.UIManager) *UIApp
 
-// Implements texel.App interface
+// Implements core.App interface
 func (a *UIApp) Run() error
 func (a *UIApp) Stop()
 func (a *UIApp) Resize(cols, rows int)

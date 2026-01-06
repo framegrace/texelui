@@ -25,7 +25,7 @@ A deep dive into TexelUI's system architecture.
 │  │ • Button     │  │ • VBox       │  │ • UIApp      │              │
 │  │ • Input      │  │ • HBox       │  │              │              │
 │  │ • TextArea   │  │ • Absolute   │  │ Bridges to   │              │
-│  │ • ComboBox   │  │              │  │ texel.App    │              │
+│  │ • ComboBox   │  │              │  │ core.App    │              │
 │  │ • ...        │  │              │  │              │              │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘              │
 │         │                 │                 │                       │
@@ -61,7 +61,7 @@ A deep dive into TexelUI's system architecture.
 │  ┌─────────────────────────┐   ┌─────────────────────────┐         │
 │  │     Standalone Mode     │   │     TexelApp Mode       │         │
 │  │                         │   │                         │         │
-│  │  internal/devshell      │   │  Texelation Desktop     │         │
+│  │  standalone      │   │  Texelation Desktop     │         │
 │  │                         │   │                         │         │
 │  │  • tcell.Screen         │   │  • Protocol messages    │         │
 │  │  • Event loop           │   │  • Pane management      │         │
@@ -104,7 +104,7 @@ texelui/
 │   ├── vbox.go             # Vertical stacking
 │   └── hbox.go             # Horizontal arrangement
 │
-├── adapter/                # texel.App integration
+├── adapter/                # core.App integration
 │   └── texel_app.go        # UIApp adapter
 │
 └── color/                  # Color utilities

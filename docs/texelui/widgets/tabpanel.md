@@ -86,7 +86,7 @@ func (tp *TabPanel) TrapsFocus() bool
 package main
 
 import (
-    "texelation/internal/devshell"
+    "github.com/framegrace/texelui/standalone"
     "github.com/framegrace/texelui/core"
     "github.com/framegrace/texelui/adapter"
     "github.com/framegrace/texelui/core"
@@ -94,7 +94,7 @@ import (
 )
 
 func main() {
-    devshell.Run(func(args []string) (texel.App, error) {
+    standalone.Run(func(args []string) (core.App, error) {
         ui := core.NewUIManager()
 
         // Create tab panel

@@ -12,7 +12,7 @@ import (
 	"github.com/framegrace/texelui/theme"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/primitives"
-	"texelation/texelui/widgets/colorpicker"
+	"github.com/framegrace/texelui/widgets/colorpicker"
 )
 
 // ColorPickerMode identifies the selection mode.

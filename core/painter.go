@@ -4,13 +4,13 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-// Painter writes into a [][]texel.Cell target with clipping.
+// Painter writes into a [][]Cell target with clipping.
 type Painter struct {
-	buf  [][]texel.Cell
+	buf  [][]Cell
 	clip Rect
 }
 
-func NewPainter(buf [][]texel.Cell, clip Rect) *Painter {
+func NewPainter(buf [][]Cell, clip Rect) *Painter {
 	return &Painter{buf: buf, clip: clip}
 }
 
@@ -34,7 +34,7 @@ func (p *Painter) SetCell(x, y int, ch rune, style tcell.Style) {
 		return
 	}
 	if y >= 0 && y < len(p.buf) && x >= 0 && len(p.buf) > 0 && x < len(p.buf[y]) {
-		p.buf[y][x] = texel.Cell{Ch: ch, Style: style}
+		p.buf[y][x] = Cell{Ch: ch, Style: style}
 	}
 }
 

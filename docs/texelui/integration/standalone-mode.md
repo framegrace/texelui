@@ -4,7 +4,7 @@ Running TexelUI applications directly in the terminal.
 
 ## Overview
 
-Standalone mode uses `devshell` to run your TexelUI application directly in the terminal, without Texelation. Perfect for development and single-purpose tools.
+Standalone mode uses `standalone` to run your TexelUI application directly in the terminal, without Texelation. Perfect for development and single-purpose tools.
 
 ```
 ┌─────────────────────────────────────┐
@@ -26,7 +26,7 @@ package main
 import (
     "github.com/framegrace/texelui/core"
     "github.com/framegrace/texelui/widgets"
-    "texelation/internal/devshell"
+    "github.com/framegrace/texelui/standalone"
 )
 
 func main() {
@@ -35,22 +35,22 @@ func main() {
     ui.AddWidget(widgets.NewLabel(5, 2, 30, 1, "Hello, TexelUI!"))
     ui.AddWidget(widgets.NewButton(5, 4, 12, 1, "Click Me"))
 
-    devshell.Run(ui)
+    standalone.RunUI(ui)
 }
 ```
 
-## devshell Package
+## standalone Package
 
-The `devshell` package provides terminal initialization and event loop:
+The `standalone` package provides terminal initialization and event loop:
 
 ```go
-import "texelation/internal/devshell"
+import "github.com/framegrace/texelui/standalone"
 ```
 
-### Run Function
+### RunUI Function
 
 ```go
-func Run(ui *core.UIManager) error
+func RunUI(ui *core.UIManager) error
 ```
 
 Starts the application:
@@ -63,7 +63,7 @@ Starts the application:
 ### With Options
 
 ```go
-func RunWithOptions(ui *core.UIManager, opts Options) error
+func RunUIWithOptions(ui *core.UIManager, opts Options) error
 ```
 
 **Options struct:**
@@ -73,8 +73,8 @@ type Options struct {
     // Exit key (default: Escape)
     ExitKey tcell.Key
 
-    // Enable mouse support (default: true)
-    EnableMouse bool
+    // Disable mouse support (default: false)
+    DisableMouse bool
 
     // Custom initialization
     OnInit func(screen tcell.Screen)
@@ -96,7 +96,7 @@ import (
     "github.com/framegrace/texelui/core"
     "github.com/framegrace/texelui/layout"
     "github.com/framegrace/texelui/widgets"
-    "texelation/internal/devshell"
+    "github.com/framegrace/texelui/standalone"
 )
 
 func main() {
@@ -124,7 +124,7 @@ func main() {
     }
 
     cancelBtn.OnActivate = func() {
-        // Exit handled by devshell
+        // Exit handled by standalone
     }
 
     // Add to UI
@@ -137,7 +137,7 @@ func main() {
     ui.AddWidget(cancelBtn)
 
     // Run
-    if err := devshell.Run(ui); err != nil {
+    if err := standalone.RunUI(ui); err != nil {
         log.Fatal(err)
     }
 }
@@ -145,7 +145,7 @@ func main() {
 
 ## Event Handling
 
-devshell routes events to UIManager automatically:
+standalone routes events to UIManager automatically:
 
 ### Keyboard Events
 
@@ -157,7 +157,7 @@ devshell routes events to UIManager automatically:
 │  tcell.PollEvent()                              │
 │       │                                         │
 │       ▼                                         │
-│  devshell event loop                            │
+│  standalone event loop                            │
 │       │                                         │
 │       ▼                                         │
 │  ui.HandleKey(event)                            │
@@ -177,7 +177,7 @@ devshell routes events to UIManager automatically:
 │  tcell.PollEvent()                              │
 │       │                                         │
 │       ▼                                         │
-│  devshell event loop                            │
+│  standalone event loop                            │
 │       │                                         │
 │       ▼                                         │
 │  ui.HandleMouse(event)                          │
@@ -216,17 +216,17 @@ Press `Escape` to exit (configurable).
 ### Custom Exit
 
 ```go
-opts := devshell.Options{
+opts := standalone.Options{
     ExitKey: tcell.KeyCtrlQ,  // Ctrl+Q to exit
 }
-devshell.RunWithOptions(ui, opts)
+standalone.RunUIWithOptions(ui, opts)
 ```
 
 ### Programmatic Exit
 
 ```go
 // In your widget or handler
-devshell.RequestExit()
+standalone.RequestExit()
 ```
 
 ## Theming in Standalone
@@ -283,13 +283,13 @@ buttonStyle := tcell.StyleDefault.
 package main
 
 import (
-    "texelation/internal/devshell"
+    "github.com/framegrace/texelui/standalone"
     "texelation/apps/myapp"
 )
 
 func main() {
     ui := myapp.CreateUI()
-    devshell.Run(ui)
+    standalone.RunUI(ui)
 }
 ```
 
@@ -326,7 +326,7 @@ func (app *MyApp) Resize(w, h int) {
 ### 2. Clean Exit
 
 ```go
-opts := devshell.Options{
+opts := standalone.Options{
     OnExit: func() {
         // Save state, cleanup resources
         saveConfig()
@@ -347,7 +347,7 @@ log.Println("Debug message")
 ### 4. Handle Ctrl+C
 
 ```go
-// devshell handles SIGINT, but you can add cleanup
+// standalone handles SIGINT, but you can add cleanup
 import "os/signal"
 
 c := make(chan os.Signal, 1)

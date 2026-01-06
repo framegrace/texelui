@@ -48,8 +48,7 @@ TexelUI is the official widget library for building text-based user interfaces i
 
 **1. Run the demo:**
 ```bash
-make build-apps
-./bin/texelui-demo
+go run ./cmd/texelui-demo
 ```
 
 **2. Create a simple app with layout containers:**
@@ -57,15 +56,14 @@ make build-apps
 package main
 
 import (
-    "texelation/internal/devshell"
+    "github.com/framegrace/texelui/standalone"
     "github.com/framegrace/texelui/core"
     "github.com/framegrace/texelui/adapter"
-    "github.com/framegrace/texelui/core"
     "github.com/framegrace/texelui/widgets"
 )
 
 func main() {
-    devshell.Run(func(args []string) (texel.App, error) {
+    standalone.Run(func(args []string) (core.App, error) {
         ui := core.NewUIManager()
 
         // Create a vertical layout container
@@ -87,13 +85,13 @@ func main() {
 
         // App adapter handles resize automatically
         app := adapter.NewUIApp("My App", ui)
-        app.OnResize(func(w, h int) {
+        app.SetOnResize(func(w, h int) {
             vbox.SetPosition(2, 2)
             vbox.Resize(w-4, h-4)
         })
 
         return app, nil
-    }, nil)
+    })
 }
 ```
 
@@ -187,7 +185,7 @@ Related documentation:
 │  │              Runtime Environment                     │    │
 │  ├─────────────────────┬───────────────────────────────┤    │
 │  │    Standalone       │       TexelApp Mode           │    │
-│  │    (devshell)       │    (Texelation Desktop)       │    │
+│  │    (standalone)       │    (Texelation Desktop)       │    │
 │  │                     │                               │    │
 │  │  Direct tcell       │   Embedded in pane,           │    │
 │  │  terminal access    │   protocol-based rendering    │    │
@@ -218,7 +216,7 @@ Perfect for development, testing, or simple tools.
 Embed inside Texelation desktop as a managed application:
 ```go
 // Register your app with the server
-registry["my-app"] = func() texel.App {
+registry["my-app"] = func() core.App {
     return myTexelUIApp()
 }
 ```
