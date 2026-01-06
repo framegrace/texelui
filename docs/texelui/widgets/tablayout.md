@@ -18,8 +18,8 @@ A low-level tabbed container with switchable content panels.
 
 ```go
 import (
-    "texelation/texelui/widgets"
-    "texelation/texelui/primitives"
+    "github.com/framegrace/texelui/widgets"
+    "github.com/framegrace/texelui/primitives"
 )
 ```
 
@@ -62,11 +62,11 @@ import (
     "log"
 
     "texelation/internal/devshell"
-    "texelation/texel"
-    "texelation/texelui/adapter"
-    "texelation/texelui/core"
-    "texelation/texelui/primitives"
-    "texelation/texelui/widgets"
+    "github.com/framegrace/texelui/core"
+    "github.com/framegrace/texelui/adapter"
+    "github.com/framegrace/texelui/core"
+    "github.com/framegrace/texelui/primitives"
+    "github.com/framegrace/texelui/widgets"
 )
 
 func main() {

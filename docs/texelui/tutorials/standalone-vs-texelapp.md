@@ -51,10 +51,10 @@ package main
 import (
 	"log"
 	"texelation/internal/devshell"
-	"texelation/texel"
-	"texelation/texelui/adapter"
-	"texelation/texelui/core"
-	"texelation/texelui/widgets"
+	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/adapter"
+	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/widgets"
 )
 
 func main() {
@@ -154,10 +154,10 @@ Your application runs inside the Texelation desktop environment as a managed pan
 package myapp
 
 import (
-	"texelation/texel"
-	"texelation/texelui/adapter"
-	"texelation/texelui/core"
-	"texelation/texelui/widgets"
+	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/adapter"
+	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/widgets"
 )
 
 // New creates the TexelApp
@@ -261,10 +261,10 @@ You can design your app to support both modes:
 package myapp
 
 import (
-	"texelation/texel"
-	"texelation/texelui/adapter"
-	"texelation/texelui/core"
-	"texelation/texelui/widgets"
+	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/adapter"
+	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/widgets"
 )
 
 // New creates the app (works for both modes)

@@ -42,8 +42,8 @@ import (
 	"fmt"
 
 	"github.com/gdamore/tcell/v2"
-	"texelation/texel/theme"
-	"texelation/texelui/core"
+	"github.com/framegrace/texelui/theme"
+	"github.com/framegrace/texelui/core"
 )
 
 // ProgressBar displays a visual progress indicator.
@@ -258,8 +258,8 @@ import (
 	"fmt"
 
 	"github.com/gdamore/tcell/v2"
-	"texelation/texel/theme"
-	"texelation/texelui/core"
+	"github.com/framegrace/texelui/theme"
+	"github.com/framegrace/texelui/core"
 )
 
 // ProgressBar displays a visual progress indicator.

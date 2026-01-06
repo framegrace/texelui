@@ -85,7 +85,7 @@ func (w *MyListWidget) HandleKey(ev *tcell.EventKey) bool {
 ## Importing Primitives
 
 ```go
-import "texelation/texelui/primitives"
+import "github.com/framegrace/texelui/primitives"
 ```
 
 ## See Also

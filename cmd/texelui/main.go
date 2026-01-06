@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"texelation/apps/texeluicli"
+	"github.com/framegrace/texelui/apps/texeluicli"
 )
 
 func main() {

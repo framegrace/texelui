@@ -27,7 +27,7 @@ TexelApp mode integrates your TexelUI application into the Texelation desktop en
 The `adapter.UIApp` bridges UIManager to Texelation's App interface:
 
 ```go
-import "texelation/texelui/adapter"
+import "github.com/framegrace/texelui/adapter"
 
 func New() texel.App {
     ui := core.NewUIManager()
@@ -43,11 +43,11 @@ package myapp
 
 import (
     "github.com/gdamore/tcell/v2"
-    "texelation/texel"
-    "texelation/texelui/adapter"
-    "texelation/texelui/core"
-    "texelation/texelui/layout"
-    "texelation/texelui/widgets"
+    "github.com/framegrace/texelui/core"
+    "github.com/framegrace/texelui/adapter"
+    "github.com/framegrace/texelui/core"
+    "github.com/framegrace/texelui/layout"
+    "github.com/framegrace/texelui/widgets"
 )
 
 // New creates a new instance of the app
@@ -304,9 +304,9 @@ Support both standalone and TexelApp from the same code:
 package myapp
 
 import (
-    "texelation/texel"
-    "texelation/texelui/adapter"
-    "texelation/texelui/core"
+    "github.com/framegrace/texelui/core"
+    "github.com/framegrace/texelui/adapter"
+    "github.com/framegrace/texelui/core"
 )
 
 // CreateUI builds the UI (shared)

@@ -20,7 +20,7 @@ ScrollPane is a container widget that provides vertical scrolling when content i
 ## Import
 
 ```go
-import "texelation/texelui/scroll"
+import "github.com/framegrace/texelui/scroll"
 ```
 
 ## Constructor
@@ -109,11 +109,11 @@ package main
 import (
     "fmt"
     "texelation/internal/devshell"
-    "texelation/texel"
-    "texelation/texelui/adapter"
-    "texelation/texelui/core"
-    "texelation/texelui/scroll"
-    "texelation/texelui/widgets"
+    "github.com/framegrace/texelui/core"
+    "github.com/framegrace/texelui/adapter"
+    "github.com/framegrace/texelui/core"
+    "github.com/framegrace/texelui/scroll"
+    "github.com/framegrace/texelui/widgets"
 )
 
 func main() {

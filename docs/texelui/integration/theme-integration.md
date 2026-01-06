@@ -228,7 +228,7 @@ func (a *MyApp) applyStyles() {
 Without Texelation, load theme manually:
 
 ```go
-import "texelation/texel/theme"
+import "github.com/framegrace/texelui/theme"
 
 func loadTheme() (*theme.Theme, error) {
     // From file
@@ -261,8 +261,8 @@ package widgets
 
 import (
     "github.com/gdamore/tcell/v2"
-    "texelation/texel/theme"
-    "texelation/texelui/core"
+    "github.com/framegrace/texelui/theme"
+    "github.com/framegrace/texelui/core"
 )
 
 type ThemedButton struct {

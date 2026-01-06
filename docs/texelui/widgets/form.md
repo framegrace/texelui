@@ -23,7 +23,7 @@ Form provides a structured way to create data entry forms with consistent label 
 ## Import
 
 ```go
-import "texelation/texelui/widgets"
+import "github.com/framegrace/texelui/widgets"
 ```
 
 ## Constructors
@@ -96,10 +96,10 @@ package main
 
 import (
     "texelation/internal/devshell"
-    "texelation/texel"
-    "texelation/texelui/adapter"
-    "texelation/texelui/core"
-    "texelation/texelui/widgets"
+    "github.com/framegrace/texelui/core"
+    "github.com/framegrace/texelui/adapter"
+    "github.com/framegrace/texelui/core"
+    "github.com/framegrace/texelui/widgets"
 )
 
 func main() {
@@ -210,7 +210,7 @@ form := widgets.NewFormWithConfig(config)
 For forms with many fields that may overflow:
 
 ```go
-import "texelation/texelui/scroll"
+import "github.com/framegrace/texelui/scroll"
 
 // Create scrollable form
 sp := scroll.NewScrollPane()

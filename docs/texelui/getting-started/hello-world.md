@@ -11,10 +11,10 @@ import (
 	"log"
 
 	"texelation/internal/devshell"
-	"texelation/texel"
-	"texelation/texelui/adapter"
-	"texelation/texelui/core"
-	"texelation/texelui/widgets"
+	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/adapter"
+	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/widgets"
 )
 
 func main() {
@@ -70,10 +70,10 @@ import (
 	"log"
 
 	"texelation/internal/devshell"           // Standalone runner
-	"texelation/texel"                       // Core texel types
-	"texelation/texelui/adapter"             // texel.App adapter
-	"texelation/texelui/core"                // UIManager, Painter, etc.
-	"texelation/texelui/widgets"             // Built-in widgets
+	"github.com/framegrace/texelui/core"                       // Core texel types
+	"github.com/framegrace/texelui/adapter"             // texel.App adapter
+	"github.com/framegrace/texelui/core"                // UIManager, Painter, etc.
+	"github.com/framegrace/texelui/widgets"             // Built-in widgets
 )
 ```
 
@@ -281,7 +281,7 @@ vbox.AddChild(footer)            // Natural size (1 row)
 ### Create a Scrollable Form
 
 ```go
-import "texelation/texelui/scroll"
+import "github.com/framegrace/texelui/scroll"
 
 // Create scroll pane for long content
 scrollPane := scroll.NewScrollPane()

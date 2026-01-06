@@ -387,11 +387,11 @@ func (a *UIApp) UI() *core.UIManager
 ## Import Paths
 
 ```go
-import "texelation/texelui/core"
-import "texelation/texelui/widgets"
-import "texelation/texelui/primitives"
-import "texelation/texelui/layout"
-import "texelation/texelui/adapter"
+import "github.com/framegrace/texelui/core"
+import "github.com/framegrace/texelui/widgets"
+import "github.com/framegrace/texelui/primitives"
+import "github.com/framegrace/texelui/layout"
+import "github.com/framegrace/texelui/adapter"
 ```
 
 ## See Also

@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	"texelation/texelui/core"
-	"texelation/texelui/widgets"
+	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/widgets"
 )
 
 type Event struct {

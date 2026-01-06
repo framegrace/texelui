@@ -36,8 +36,8 @@ Absolute is the default - no layout manager needed:
 package main
 
 import (
-    "texelation/texelui/core"
-    "texelation/texelui/widgets"
+    "github.com/framegrace/texelui/core"
+    "github.com/framegrace/texelui/widgets"
 )
 
 func main() {

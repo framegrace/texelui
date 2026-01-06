@@ -9,7 +9,7 @@ A single-line text entry widget with caret, placeholder, and horizontal scrollin
 ## Import
 
 ```go
-import "texelation/texelui/widgets"
+import "github.com/framegrace/texelui/widgets"
 ```
 
 ## Constructor
@@ -45,10 +45,10 @@ import (
 
     "github.com/gdamore/tcell/v2"
     "texelation/internal/devshell"
-    "texelation/texel"
-    "texelation/texelui/adapter"
-    "texelation/texelui/core"
-    "texelation/texelui/widgets"
+    "github.com/framegrace/texelui/core"
+    "github.com/framegrace/texelui/adapter"
+    "github.com/framegrace/texelui/core"
+    "github.com/framegrace/texelui/widgets"
 )
 
 func main() {

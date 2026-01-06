@@ -120,7 +120,7 @@ go test -v ./texelui/...
 
 ### Build Errors
 
-**"package texelation/texelui/... not found"**
+**"package github.com/framegrace/texelui/... not found"**
 - Ensure you're in the texelation root directory
 - Run `go mod tidy` to update dependencies
 

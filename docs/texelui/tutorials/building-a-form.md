@@ -63,10 +63,10 @@ import (
 	"log"
 
 	"texelation/internal/devshell"
-	"texelation/texel"
-	"texelation/texelui/adapter"
-	"texelation/texelui/core"
-	"texelation/texelui/widgets"
+	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/adapter"
+	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/widgets"
 )
 
 func main() {
@@ -274,10 +274,10 @@ import (
 	"strings"
 
 	"texelation/internal/devshell"
-	"texelation/texel"
-	"texelation/texelui/adapter"
-	"texelation/texelui/core"
-	"texelation/texelui/widgets"
+	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/adapter"
+	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/widgets"
 )
 
 func main() {
@@ -503,7 +503,7 @@ if nameInput.Text == "" {
 For forms with many fields, wrap in a ScrollPane:
 
 ```go
-import "texelation/texelui/scroll"
+import "github.com/framegrace/texelui/scroll"
 
 sp := scroll.NewScrollPane()
 sp.SetChild(form)

@@ -14,7 +14,7 @@ A 2D grid with dynamic column layout and cell selection.
 ## Import
 
 ```go
-import "texelation/texelui/primitives"
+import "github.com/framegrace/texelui/primitives"
 ```
 
 ## Constructor
@@ -49,8 +49,8 @@ func NewGrid(x, y, w, h int) *Grid
 package main
 
 import (
-    "texelation/texelui/core"
-    "texelation/texelui/primitives"
+    "github.com/framegrace/texelui/core"
+    "github.com/framegrace/texelui/primitives"
 )
 
 func createColorGrid() *primitives.Grid {

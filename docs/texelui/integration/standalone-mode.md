@@ -24,8 +24,8 @@ Standalone mode uses `devshell` to run your TexelUI application directly in the 
 package main
 
 import (
-    "texelation/texelui/core"
-    "texelation/texelui/widgets"
+    "github.com/framegrace/texelui/core"
+    "github.com/framegrace/texelui/widgets"
     "texelation/internal/devshell"
 )
 
@@ -93,9 +93,9 @@ import (
     "log"
 
     "github.com/gdamore/tcell/v2"
-    "texelation/texelui/core"
-    "texelation/texelui/layout"
-    "texelation/texelui/widgets"
+    "github.com/framegrace/texelui/core"
+    "github.com/framegrace/texelui/layout"
+    "github.com/framegrace/texelui/widgets"
     "texelation/internal/devshell"
 )
 
@@ -262,7 +262,7 @@ input.Style = inputStyle
 Or use Texelation's theme system standalone:
 
 ```go
-import "texelation/texel/theme"
+import "github.com/framegrace/texelui/theme"
 
 // Load theme
 themeData, _ := os.ReadFile("theme.json")

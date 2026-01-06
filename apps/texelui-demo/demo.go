@@ -10,15 +10,15 @@ package texeluidemo
 import (
 	"fmt"
 
-	"texelation/texel"
-	"texelation/texelui/adapter"
-	"texelation/texelui/core"
-	"texelation/texelui/scroll"
-	"texelation/texelui/widgets"
+	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/adapter"
+	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/scroll"
+	"github.com/framegrace/texelui/widgets"
 )
 
 // New creates a new TexelUI widget showcase demo app.
-func New() texel.App {
+func New() core.App {
 	ui := core.NewUIManager()
 	app := adapter.NewUIApp("TexelUI Widget Showcase", ui)
 

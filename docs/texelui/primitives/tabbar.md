@@ -11,7 +11,7 @@ A horizontal tab navigation bar.
 ## Import
 
 ```go
-import "texelation/texelui/primitives"
+import "github.com/framegrace/texelui/primitives"
 ```
 
 ## Constructor
@@ -50,8 +50,8 @@ type TabItem struct {
 package main
 
 import (
-    "texelation/texelui/core"
-    "texelation/texelui/primitives"
+    "github.com/framegrace/texelui/core"
+    "github.com/framegrace/texelui/primitives"
 )
 
 func createTabBar() *primitives.TabBar {

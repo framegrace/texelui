@@ -16,7 +16,7 @@ A vertical scrolling list with keyboard and mouse navigation.
 ## Import
 
 ```go
-import "texelation/texelui/primitives"
+import "github.com/framegrace/texelui/primitives"
 ```
 
 ## Constructor
@@ -49,8 +49,8 @@ func NewScrollableList(x, y, w, h int) *ScrollableList
 package main
 
 import (
-    "texelation/texelui/core"
-    "texelation/texelui/primitives"
+    "github.com/framegrace/texelui/core"
+    "github.com/framegrace/texelui/primitives"
 )
 
 func createList() *primitives.ScrollableList {
