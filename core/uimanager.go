@@ -4,8 +4,8 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/gdamore/tcell/v2"
 	"github.com/framegrace/texelui/theme"
+	"github.com/gdamore/tcell/v2"
 )
 
 // StatusBarWidget is an interface for the status bar widget.
@@ -475,12 +475,14 @@ func (u *UIManager) cycleFocusLocked(forward bool) bool {
 		}
 	}
 
-	// Try to find a parent container that can handle focus cycling
-	for _, w := range u.widgets {
-		if fc, ok := w.(FocusCycler); ok {
-			// Check if this container contains the focused widget
-			if u.containsWidgetLocked(w, u.focused) {
-				if fc.CycleFocus(forward) {
+	// Try nearest parent containers that can handle focus cycling
+	if u.focused != nil {
+		if chain := u.focusCyclerChainLocked(u.focused); len(chain) > 0 {
+			for i := len(chain) - 1; i >= 0; i-- {
+				if fc, ok := u.focused.(FocusCycler); ok && chain[i] == fc {
+					continue
+				}
+				if chain[i].CycleFocus(forward) {
 					return true
 				}
 			}
@@ -542,6 +544,52 @@ func (u *UIManager) containsWidgetLocked(w, target Widget) bool {
 		return found
 	}
 	return false
+}
+
+func (u *UIManager) focusCyclerChainLocked(target Widget) []FocusCycler {
+	if target == nil {
+		return nil
+	}
+	for _, root := range u.widgets {
+		if found, chain := focusCyclerChain(root, target); found {
+			return chain
+		}
+	}
+	return nil
+}
+
+func focusCyclerChain(node, target Widget) (bool, []FocusCycler) {
+	if node == nil {
+		return false, nil
+	}
+	if node == target {
+		if fc, ok := node.(FocusCycler); ok {
+			return true, []FocusCycler{fc}
+		}
+		return true, nil
+	}
+
+	if cc, ok := node.(ChildContainer); ok {
+		var found bool
+		var chain []FocusCycler
+		cc.VisitChildren(func(child Widget) {
+			if found {
+				return
+			}
+			childFound, childChain := focusCyclerChain(child, target)
+			if childFound {
+				found = true
+				chain = childChain
+			}
+		})
+		if found {
+			if fc, ok := node.(FocusCycler); ok {
+				chain = append([]FocusCycler{fc}, chain...)
+			}
+			return true, chain
+		}
+	}
+	return false, nil
 }
 
 // cycleRootWidgetsLocked cycles focus among root-level widgets.
@@ -729,7 +777,6 @@ func deepHit(w Widget, x, y int) Widget {
 	}
 	return nil
 }
-
 
 // Invalidate marks a region for redraw.
 // Thread-safe.
