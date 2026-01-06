@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -83,7 +84,7 @@ func openCmd(args []string, socketPath string) {
 		exitError(err)
 	}
 	if !resp.OK {
-		exitError(fmt.Errorf(resp.Error))
+		exitError(errors.New(resp.Error))
 	}
 	fmt.Println(resp.Session)
 }
@@ -113,7 +114,7 @@ func waitCmd(args []string, socketPath string) {
 		exitError(err)
 	}
 	if !resp.OK {
-		exitError(fmt.Errorf(resp.Error))
+		exitError(errors.New(resp.Error))
 	}
 
 	if *value != "" {
@@ -152,7 +153,7 @@ func getCmd(args []string, socketPath string) {
 		exitError(err)
 	}
 	if !resp.OK {
-		exitError(fmt.Errorf(resp.Error))
+		exitError(errors.New(resp.Error))
 	}
 	switch strings.ToLower(*format) {
 	case "sh":
@@ -194,7 +195,7 @@ func setCmd(args []string, socketPath string) {
 		exitError(err)
 	}
 	if !resp.OK {
-		exitError(fmt.Errorf(resp.Error))
+		exitError(errors.New(resp.Error))
 	}
 }
 
@@ -219,7 +220,7 @@ func appendCmd(args []string, socketPath string) {
 		exitError(err)
 	}
 	if !resp.OK {
-		exitError(fmt.Errorf(resp.Error))
+		exitError(errors.New(resp.Error))
 	}
 }
 
@@ -251,7 +252,7 @@ func runCmd(args []string, socketPath string) {
 		exitError(err)
 	}
 	if !resp.OK {
-		exitError(fmt.Errorf(resp.Error))
+		exitError(errors.New(resp.Error))
 	}
 	if resp.ExitCode != nil && *resp.ExitCode != 0 {
 		os.Exit(*resp.ExitCode)
@@ -269,7 +270,7 @@ func closeCmd(args []string, socketPath string) {
 		exitError(err)
 	}
 	if !resp.OK {
-		exitError(fmt.Errorf(resp.Error))
+		exitError(errors.New(resp.Error))
 	}
 }
 
