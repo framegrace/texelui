@@ -10,7 +10,7 @@ package main
 import (
 	"log"
 
-	"github.com/framegrace/texelui/standalone"
+	"github.com/framegrace/texelui/runtime"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/adapter"
 	"github.com/framegrace/texelui/core"
@@ -18,7 +18,7 @@ import (
 )
 
 func main() {
-	err := standalone.Run(createApp)
+	err := runtime.Run(createApp)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func createApp(args []string) (core.App, error) {
 import (
 	"log"
 
-	"github.com/framegrace/texelui/standalone"           // Standalone runner
+	"github.com/framegrace/texelui/runtime"           // Runtime runner
 	"github.com/framegrace/texelui/core"                       // Core texel types
 	"github.com/framegrace/texelui/adapter"             // core.App adapter
 	"github.com/framegrace/texelui/core"                // UIManager, Painter, etc.
@@ -77,7 +77,7 @@ import (
 )
 ```
 
-**standalone** - Provides standalone execution without needing the Texelation server
+**runtime** - Provides standalone execution without needing the Texelation server
 **texel** - Defines the `core.App` interface that all apps implement
 **adapter** - Bridges TexelUI's `UIManager` to the `core.App` interface
 **core** - Core TexelUI types: `UIManager`, `Widget`, `Painter`, `Rect`
@@ -87,14 +87,14 @@ import (
 
 ```go
 func main() {
-	err := standalone.Run(createApp)
+	err := runtime.Run(createApp)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 ```
 
-`standalone.Run` handles:
+`runtime.Run` handles:
 1. Creating a terminal screen (via tcell)
 2. Setting up mouse and paste support
 3. Running the main event loop

@@ -4,7 +4,7 @@ Running TexelUI applications directly in the terminal.
 
 ## Overview
 
-Standalone mode uses `standalone` to run your TexelUI application directly in the terminal, without Texelation. Perfect for development and single-purpose tools.
+Standalone mode uses `runtime` to run your TexelUI application directly in the terminal, without Texelation. Perfect for development and single-purpose tools.
 
 ```
 ┌─────────────────────────────────────┐
@@ -26,7 +26,7 @@ package main
 import (
     "github.com/framegrace/texelui/core"
     "github.com/framegrace/texelui/widgets"
-    "github.com/framegrace/texelui/standalone"
+    "github.com/framegrace/texelui/runtime"
 )
 
 func main() {
@@ -35,16 +35,16 @@ func main() {
     ui.AddWidget(widgets.NewLabel(5, 2, 30, 1, "Hello, TexelUI!"))
     ui.AddWidget(widgets.NewButton(5, 4, 12, 1, "Click Me"))
 
-    standalone.RunUI(ui)
+    runtime.RunUI(ui)
 }
 ```
 
-## standalone Package
+## Runtime Package
 
-The `standalone` package provides terminal initialization and event loop:
+The `runtime` package provides terminal initialization and event loop:
 
 ```go
-import "github.com/framegrace/texelui/standalone"
+import "github.com/framegrace/texelui/runtime"
 ```
 
 ### RunUI Function
@@ -96,7 +96,7 @@ import (
     "github.com/framegrace/texelui/core"
     "github.com/framegrace/texelui/layout"
     "github.com/framegrace/texelui/widgets"
-    "github.com/framegrace/texelui/standalone"
+    "github.com/framegrace/texelui/runtime"
 )
 
 func main() {
@@ -124,7 +124,7 @@ func main() {
     }
 
     cancelBtn.OnActivate = func() {
-        // Exit handled by standalone
+        // Exit handled by runtime
     }
 
     // Add to UI
@@ -137,7 +137,7 @@ func main() {
     ui.AddWidget(cancelBtn)
 
     // Run
-    if err := standalone.RunUI(ui); err != nil {
+    if err := runtime.RunUI(ui); err != nil {
         log.Fatal(err)
     }
 }
@@ -145,7 +145,7 @@ func main() {
 
 ## Event Handling
 
-standalone routes events to UIManager automatically:
+runtime routes events to UIManager automatically:
 
 ### Keyboard Events
 
@@ -157,7 +157,7 @@ standalone routes events to UIManager automatically:
 │  tcell.PollEvent()                              │
 │       │                                         │
 │       ▼                                         │
-│  standalone event loop                            │
+│  runtime event loop                            │
 │       │                                         │
 │       ▼                                         │
 │  ui.HandleKey(event)                            │
@@ -177,7 +177,7 @@ standalone routes events to UIManager automatically:
 │  tcell.PollEvent()                              │
 │       │                                         │
 │       ▼                                         │
-│  standalone event loop                            │
+│  runtime event loop                            │
 │       │                                         │
 │       ▼                                         │
 │  ui.HandleMouse(event)                          │
@@ -216,17 +216,17 @@ Press `Escape` to exit (configurable).
 ### Custom Exit
 
 ```go
-opts := standalone.Options{
+opts := runtime.Options{
     ExitKey: tcell.KeyCtrlQ,  // Ctrl+Q to exit
 }
-standalone.RunUIWithOptions(ui, opts)
+runtime.RunUIWithOptions(ui, opts)
 ```
 
 ### Programmatic Exit
 
 ```go
 // In your widget or handler
-standalone.RequestExit()
+runtime.RequestExit()
 ```
 
 ## Theming in Standalone
@@ -283,13 +283,13 @@ buttonStyle := tcell.StyleDefault.
 package main
 
 import (
-    "github.com/framegrace/texelui/standalone"
+    "github.com/framegrace/texelui/runtime"
     "texelation/apps/myapp"
 )
 
 func main() {
     ui := myapp.CreateUI()
-    standalone.RunUI(ui)
+    runtime.RunUI(ui)
 }
 ```
 
@@ -326,7 +326,7 @@ func (app *MyApp) Resize(w, h int) {
 ### 2. Clean Exit
 
 ```go
-opts := standalone.Options{
+opts := runtime.Options{
     OnExit: func() {
         // Save state, cleanup resources
         saveConfig()
@@ -347,7 +347,7 @@ log.Println("Debug message")
 ### 4. Handle Ctrl+C
 
 ```go
-// standalone handles SIGINT, but you can add cleanup
+// runtime handles SIGINT, but you can add cleanup
 import "os/signal"
 
 c := make(chan os.Signal, 1)

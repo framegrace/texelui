@@ -32,7 +32,7 @@ func TestStatusBarShowMessageDuringHandleKey(t *testing.T) {
 	ui.AddWidget(btn)
 	ui.Focus(btn)
 
-	// Set up a refresh notifier (like the standalone runner does)
+	// Set up a refresh notifier (like the runtime runner does)
 	refreshCh := make(chan bool, 1)
 	ui.SetRefreshNotifier(refreshCh)
 
@@ -191,13 +191,13 @@ func TestStatusBarRenderDuringShowMessage(t *testing.T) {
 	refreshCh := make(chan bool, 1)
 	ui.SetRefreshNotifier(refreshCh)
 
-	// Simulate the standalone runner pattern: render after each event
+	// Simulate the runtime runner pattern: render after each event
 	for i := 0; i < 10; i++ {
 		done := make(chan struct{})
 		go func() {
 			// Show a message (like config editor does)
 			sb.ShowSuccess("Saved.")
-			// Then render (like standalone runner does after HandleKey)
+			// Then render (like runtime runner does after HandleKey)
 			ui.Render()
 			close(done)
 		}()

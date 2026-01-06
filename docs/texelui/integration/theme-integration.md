@@ -250,7 +250,7 @@ func main() {
         Background(th.Semantics.ActionPrimaryBg)
 
     ui.AddWidget(button)
-    standalone.RunUI(ui)
+    runtime.RunUI(ui)
 }
 ```
 

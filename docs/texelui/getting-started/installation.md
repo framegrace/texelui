@@ -74,7 +74,7 @@ adapter/     # core.App adapter
 scroll/      # ScrollPane + scroll helpers
 theme/       # Theme loading + palettes
 color/       # Color utilities (OKLCH, etc.)
-standalone/  # Standalone runner
+runtime/     # Runtime runner
 apps/        # Demo apps + texeluicli
 cmd/         # CLI + demo entry points
 ```

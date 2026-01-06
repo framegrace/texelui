@@ -59,7 +59,7 @@ package main
 import (
     "log"
 
-    "github.com/framegrace/texelui/standalone"
+    "github.com/framegrace/texelui/runtime"
     "github.com/framegrace/texelui/core"
     "github.com/framegrace/texelui/adapter"
     "github.com/framegrace/texelui/core"
@@ -67,7 +67,7 @@ import (
 )
 
 func main() {
-    err := standalone.Run(func(args []string) (core.App, error) {
+    err := runtime.Run(func(args []string) (core.App, error) {
         ui := core.NewUIManager()
 
         // Create border with child

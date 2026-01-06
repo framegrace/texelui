@@ -68,7 +68,7 @@ func (h *HBox) Resize(w, h int)
 package main
 
 import (
-    "github.com/framegrace/texelui/standalone"
+    "github.com/framegrace/texelui/runtime"
     "github.com/framegrace/texelui/core"
     "github.com/framegrace/texelui/adapter"
     "github.com/framegrace/texelui/core"
@@ -76,7 +76,7 @@ import (
 )
 
 func main() {
-    standalone.Run(func(args []string) (core.App, error) {
+    runtime.Run(func(args []string) (core.App, error) {
         ui := core.NewUIManager()
 
         // Create horizontal button row

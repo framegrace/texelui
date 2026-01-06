@@ -50,7 +50,7 @@ import (
     "log"
 
     "github.com/gdamore/tcell/v2"
-    "github.com/framegrace/texelui/standalone"
+    "github.com/framegrace/texelui/runtime"
     "github.com/framegrace/texelui/core"
     "github.com/framegrace/texelui/adapter"
     "github.com/framegrace/texelui/core"
@@ -58,7 +58,7 @@ import (
 )
 
 func main() {
-    err := standalone.Run(func(args []string) (core.App, error) {
+    err := runtime.Run(func(args []string) (core.App, error) {
         ui := core.NewUIManager()
 
         // Create a VBox for vertical layout

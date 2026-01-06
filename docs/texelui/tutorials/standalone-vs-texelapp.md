@@ -23,7 +23,7 @@ TexelUI applications can run in two different modes. This guide explains both an
 │           ▼                                ▼                    │
 │  ┌─────────────────┐              ┌─────────────────┐          │
 │  │  Standalone     │              │  TexelApp Mode  │          │
-│  │  (standalone)     │              │  (Texelation)   │          │
+│  │  (runtime)        │              │  (Texelation)   │          │
 │  │                 │              │                 │          │
 │  │  • Direct tcell │              │  • Managed pane │          │
 │  │  • Single app   │              │  • Multi-app    │          │
@@ -50,7 +50,7 @@ package main
 
 import (
 	"log"
-	"github.com/framegrace/texelui/standalone"
+	"github.com/framegrace/texelui/runtime"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/adapter"
 	"github.com/framegrace/texelui/core"
@@ -58,8 +58,8 @@ import (
 )
 
 func main() {
-	// standalone.Run creates a tcell screen and runs the event loop
-	err := standalone.Run(createApp)
+	// runtime.Run creates a tcell screen and runs the event loop
+	err := runtime.Run(createApp)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func createApp(args []string) (core.App, error) {
 │              Your Terminal              │
 │                                         │
 │  ┌─────────────────────────────────┐   │
-│  │          standalone.Run           │   │
+│  │          runtime.Run           │   │
 │  │                                 │   │
 │  │  1. Creates tcell.Screen       │   │
 │  │  2. Enables mouse/paste        │   │
@@ -113,13 +113,13 @@ go build -o bin/my-app ./cmd/my-app
 go run ./cmd/my-app
 ```
 
-### Registering with standalone
+### Registering with runtime
 
-For reusable standalone apps, register with the standalone registry:
+For reusable standalone apps, register with the runtime registry:
 
 ```go
 // In init() or main
-standalone.Register("my-app", func(args []string) (core.App, error) {
+runtime.Register("my-app", func(args []string) (core.App, error) {
 	return NewMyApp(args), nil
 })
 ```
@@ -128,7 +128,7 @@ Then call from main:
 
 ```go
 func main() {
-	err := standalone.RunApp("my-app", os.Args[1:])
+	err := runtime.RunApp("my-app", os.Args[1:])
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -297,11 +297,11 @@ package main
 import (
 	"log"
 	"texelation/apps/myapp"
-	"github.com/framegrace/texelui/standalone"
+	"github.com/framegrace/texelui/runtime"
 )
 
 func main() {
-	err := standalone.Run(func(args []string) (core.App, error) {
+	err := runtime.Run(func(args []string) (core.App, error) {
 		return myapp.New(), nil
 	}, nil)
 	if err != nil {

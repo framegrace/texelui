@@ -1,30 +1,30 @@
 // Copyright © 2025 Texelation contributors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// File: standalone/runner.go
-// Summary: Standalone runner for TexelUI apps without Texelation.
+// File: runtime/runner.go
+// Summary: Runtime runner for TexelUI apps without Texelation.
 
-package standalone
+package runtime
 
 import (
 	"fmt"
 	"sync"
 
-	"github.com/gdamore/tcell/v2"
 	"github.com/framegrace/texelui/adapter"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/theme"
+	"github.com/gdamore/tcell/v2"
 )
 
 // Builder constructs a core.App, optionally using CLI args.
 type Builder func(args []string) (core.App, error)
 
-// Options controls the standalone runner behavior.
+// Options controls the runtime runner behavior.
 type Options struct {
-	ExitKey     tcell.Key
+	ExitKey      tcell.Key
 	DisableMouse bool
-	OnInit      func(screen tcell.Screen)
-	OnExit      func()
+	OnInit       func(screen tcell.Screen)
+	OnExit       func()
 }
 
 var (
@@ -32,11 +32,11 @@ var (
 	registryMu    sync.RWMutex
 	registry      = map[string]Builder{}
 
-	exitMu    sync.Mutex
+	exitMu     sync.Mutex
 	activeExit chan struct{}
 )
 
-// Register adds a builder to the standalone registry.
+// Register adds a builder to the runtime registry.
 func Register(name string, builder Builder) {
 	if name == "" || builder == nil {
 		return
@@ -52,12 +52,12 @@ func RunApp(name string, args []string) error {
 	builder := registry[name]
 	registryMu.RUnlock()
 	if builder == nil {
-		return fmt.Errorf("standalone: unknown app %q", name)
+		return fmt.Errorf("runtime: unknown app %q", name)
 	}
 	return RunWithOptions(builder, Options{}, args...)
 }
 
-// Run runs a core.App builder in a standalone terminal session.
+// Run runs a core.App builder in a terminal session.
 func Run(builder Builder, args ...string) error {
 	return RunWithOptions(builder, Options{}, args...)
 }
@@ -65,7 +65,7 @@ func Run(builder Builder, args ...string) error {
 // RunWithOptions runs a core.App builder with custom options.
 func RunWithOptions(builder Builder, opts Options, args ...string) error {
 	if builder == nil {
-		return fmt.Errorf("standalone: nil builder")
+		return fmt.Errorf("runtime: nil builder")
 	}
 	app, err := builder(args)
 	if err != nil {
@@ -74,7 +74,7 @@ func RunWithOptions(builder Builder, opts Options, args ...string) error {
 	return runApp(app, opts)
 }
 
-// RunUI runs a UIManager directly in a standalone terminal session.
+// RunUI runs a UIManager directly in a terminal session.
 func RunUI(ui *core.UIManager) error {
 	return RunUIWithOptions(ui, Options{})
 }

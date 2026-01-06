@@ -327,12 +327,12 @@ func New() core.App {
 package main
 
 import (
-    "github.com/framegrace/texelui/standalone"
+    "github.com/framegrace/texelui/runtime"
     "texelation/apps/myapp"
 )
 
 func main() {
-    standalone.RunUI(myapp.CreateUI())
+    runtime.RunUI(myapp.CreateUI())
 }
 ```
 

@@ -62,7 +62,7 @@ package main
 import (
 	"log"
 
-	"github.com/framegrace/texelui/standalone"
+	"github.com/framegrace/texelui/runtime"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/adapter"
 	"github.com/framegrace/texelui/core"
@@ -70,7 +70,7 @@ import (
 )
 
 func main() {
-	err := standalone.Run(func(args []string) (core.App, error) {
+	err := runtime.Run(func(args []string) (core.App, error) {
 		return NewRegistrationForm(), nil
 	}, nil)
 	if err != nil {
@@ -273,7 +273,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/framegrace/texelui/standalone"
+	"github.com/framegrace/texelui/runtime"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/adapter"
 	"github.com/framegrace/texelui/core"
@@ -281,7 +281,7 @@ import (
 )
 
 func main() {
-	err := standalone.Run(func(args []string) (core.App, error) {
+	err := runtime.Run(func(args []string) (core.App, error) {
 		return NewRegistrationForm(), nil
 	}, nil)
 	if err != nil {

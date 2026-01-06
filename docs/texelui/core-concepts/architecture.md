@@ -61,7 +61,7 @@ A deep dive into TexelUI's system architecture.
 │  ┌─────────────────────────┐   ┌─────────────────────────┐         │
 │  │     Standalone Mode     │   │     TexelApp Mode       │         │
 │  │                         │   │                         │         │
-│  │  standalone      │   │  Texelation Desktop     │         │
+│  │   runtime        │   │  Texelation Desktop     │         │
 │  │                         │   │                         │         │
 │  │  • tcell.Screen         │   │  • Protocol messages    │         │
 │  │  • Event loop           │   │  • Pane management      │         │

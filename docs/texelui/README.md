@@ -59,14 +59,14 @@ go run ./cmd/texelui-demo
 package main
 
 import (
-    "github.com/framegrace/texelui/standalone"
+    "github.com/framegrace/texelui/runtime"
     "github.com/framegrace/texelui/core"
     "github.com/framegrace/texelui/adapter"
     "github.com/framegrace/texelui/widgets"
 )
 
 func main() {
-    standalone.Run(func(args []string) (core.App, error) {
+    runtime.Run(func(args []string) (core.App, error) {
         ui := core.NewUIManager()
 
         // Create a vertical layout container

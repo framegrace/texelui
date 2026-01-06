@@ -51,7 +51,7 @@ import (
 	"log"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/framegrace/texelui/standalone"
+	"github.com/framegrace/texelui/runtime"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/adapter"
 	"github.com/framegrace/texelui/core"
@@ -59,8 +59,8 @@ import (
 )
 
 func main() {
-	// Register our app with the standalone runner
-	err := standalone.Run(func(args []string) (core.App, error) {
+	// Register our app with the runtime runner
+	err := runtime.Run(func(args []string) (core.App, error) {
 		return NewLoginApp(), nil
 	}, nil)
 
@@ -244,15 +244,15 @@ app.OnResize(func(w, h int) {
 })
 ```
 
-### 6. Running with standalone
+### 6. Running with runtime
 
 ```go
-standalone.Run(func(args []string) (core.App, error) {
+runtime.Run(func(args []string) (core.App, error) {
     return NewLoginApp(), nil
 }, nil)
 ```
 
-The `standalone.Run` function:
+The `runtime.Run` function:
 - Creates a terminal screen
 - Handles the event loop
 - Routes events to your app
