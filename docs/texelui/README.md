@@ -49,6 +49,9 @@ TexelUI is the official widget library for building text-based user interfaces i
 **1. Run the demo:**
 ```bash
 go run ./cmd/texelui-demo
+# or build binaries and run from ./bin
+# make demos
+# ./bin/texelui-demo
 ```
 
 **2. Create a simple app with layout containers:**

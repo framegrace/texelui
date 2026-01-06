@@ -24,6 +24,15 @@ cd texelui
 
 ### 2. Build the Project
 
+Using the Makefile (recommended):
+```bash
+# Build all packages
+make build
+
+# Build the TexelUI CLI + demo binaries
+make demos
+```
+
 Using Go directly:
 ```bash
 # Build the TexelUI CLI
@@ -48,39 +57,26 @@ After building, you'll have these relevant binaries:
 
 ```
 bin/
-├── texelui-demo     # TexelUI widget showcase (standalone)
-├── texel-server     # Texelation server
-├── texel-client     # Texelation client
-├── texelterm        # Terminal emulator (standalone)
-└── help             # Help viewer (standalone)
+├── texelui          # TexelUI CLI server/client
+└── texelui-demo     # TexelUI widget showcase (standalone)
 ```
 
 ## TexelUI Source Location
 
-TexelUI source code is organized under the `texelui/` directory:
+TexelUI source code is organized in top-level packages:
 
 ```
-texelui/
-├── core/            # Core interfaces and UIManager
-│   ├── widget.go    # Widget interface and BaseWidget
-│   ├── uimanager.go # Focus, events, rendering
-│   ├── painter.go   # Drawing primitives
-│   └── types.go     # Rect, Layout interface
-├── widgets/         # Built-in widgets
-│   ├── button.go
-│   ├── input.go
-│   ├── textarea.go
-│   └── ...
-├── primitives/      # Reusable building blocks
-│   ├── scrollablelist.go
-│   ├── grid.go
-│   └── tabbar.go
-├── layout/          # Layout managers
-│   ├── vbox.go
-│   └── hbox.go
-├── adapter/         # core.App adapter
-│   └── texel_app.go
-└── color/           # Color utilities (OKLCH, etc.)
+core/        # Core interfaces and UIManager
+widgets/     # Built-in widgets
+primitives/  # Reusable building blocks
+layout/      # Layout managers
+adapter/     # core.App adapter
+scroll/      # ScrollPane + scroll helpers
+theme/       # Theme loading + palettes
+color/       # Color utilities (OKLCH, etc.)
+standalone/  # Standalone runner
+apps/        # Demo apps + texeluicli
+cmd/         # CLI + demo entry points
 ```
 
 ## Development Setup
@@ -101,13 +97,10 @@ For VS Code, add these settings for Go development:
 
 ```bash
 # Run all TexelUI tests
-go test ./texelui/...
-
-# Run specific widget tests
-go test ./texelui/widgets/...
+make test
 
 # Run with verbose output
-go test -v ./texelui/...
+go test -v ./...
 ```
 
 ## Troubleshooting

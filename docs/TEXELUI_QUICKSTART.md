@@ -4,6 +4,8 @@ This guide shows how to try the shipped demos and embed TexelUI inside a `texel.
 
 ## Run the demos
 
+Tip: run `make demos` to build `./bin/texelui-demo` before launching.
+
 ### Single Text Editor (bordered TextArea)
 ```bash
 go run ./cmd/texelui-demo

@@ -27,6 +27,19 @@ go run ./cmd/texelui-demo
 go run ./cmd/texelui --help
 ```
 
+## Development
+
+```bash
+# Build all packages
+make build
+
+# Build CLI + demo binaries into ./bin
+make demos
+
+# Run tests
+make test
+```
+
 ## Embedding in Texelation
 
 ```go

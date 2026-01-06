@@ -25,6 +25,9 @@ cd texelui
 
 # Run the demo
 go run ./cmd/texelui-demo
+# or build binaries and run from ./bin
+# make demos
+# ./bin/texelui-demo
 ```
 
 You should see a tabbed interface with input fields, buttons, and other widgets. Use Tab to navigate between elements.
