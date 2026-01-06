@@ -27,6 +27,10 @@ go run ./cmd/texelui-demo
 go run ./cmd/texelui --help
 ```
 
+## Documentation
+
+See the full documentation landing page: [docs/texelui/README.md](docs/texelui/README.md)
+
 ## Development
 
 ```bash
