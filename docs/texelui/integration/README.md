@@ -108,7 +108,7 @@ func New() core.App {
 | [Standalone Mode](/texelui/integration/standalone-mode.md) | Running with runtime |
 | [TexelApp Mode](/texelui/integration/texelapp-mode.md) | Integration with Texelation |
 | [Theme Integration](/texelui/integration/theme-integration.md) | Using Texelation themes |
-| [TexelUI CLI](/texelui/integration/texelui-cli.md) | Driving a TexelUI form from Bash |
+| [Bash Dialog Creator (TexelUI CLI)](/texelui/integration/texelui-cli.md) | Build dialogs and workflows from Bash |
 
 ## Architecture Deep Dive
 
@@ -186,5 +186,5 @@ Start standalone for development, then wrap for Texelation:
 - [Standalone Mode](/texelui/integration/standalone-mode.md) - runtime details
 - [TexelApp Mode](/texelui/integration/texelapp-mode.md) - adapter details
 - [Theme Integration](/texelui/integration/theme-integration.md) - theming
-- [TexelUI CLI](/texelui/integration/texelui-cli.md) - Bash-driven UI example
+- [Bash Dialog Creator (TexelUI CLI)](/texelui/integration/texelui-cli.md) - Full CLI reference and examples
 - [Architecture](/texelui/core-concepts/architecture.md) - TexelUI internals
