@@ -1,4 +1,5 @@
 # TexelUI
+![TexelUI demo](docs/texeldemo.gif)
 
 A terminal UI library for building text-based applications in Go.
 
