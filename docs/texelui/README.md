@@ -42,6 +42,7 @@ TexelUI is the official widget library for building text-based user interfaces i
 | [Primitives](/texelui/primitives/README.md) | Reusable building blocks for custom widgets |
 | [Layout](/texelui/layout/README.md) | Layout managers: VBox, HBox, Absolute |
 | [Integration](/texelui/integration/README.md) | Standalone mode vs TexelApp embedding |
+| [Bash Dialog Creator (CLI)](/texelui/integration/texelui-cli.md) | Build dialogs and workflows from Bash |
 | [API Reference](/texelui/api-reference/README.md) | Interfaces and type documentation |
 
 ## 5-Minute Quickstart
