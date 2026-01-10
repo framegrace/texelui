@@ -1,5 +1,5 @@
 # TexelUI
-![TexelUI demo](docs/texeldemo.gif)
+<img src="docs/texeldemo.gif" alt="TexelUI demo" width="66%" />
 
 A terminal UI library for building text-based applications in Go.
 
