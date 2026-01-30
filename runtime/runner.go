@@ -223,7 +223,8 @@ func runApp(app core.App, opts Options) error {
 				pasteBuffer = nil
 			}
 		case *tcell.EventKey:
-			if tev.Key() == opts.ExitKey || tev.Key() == tcell.KeyCtrlC {
+			// Only check ExitKey - don't hardcode Ctrl+C (apps like terminals need it)
+			if opts.ExitKey != tcell.Key(-1) && tev.Key() == opts.ExitKey {
 				if opts.OnExit != nil {
 					opts.OnExit()
 				}
