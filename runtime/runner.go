@@ -136,6 +136,12 @@ func runApp(app core.App, opts Options) error {
 	}
 	defer screen.Fini()
 
+	// Provide clipboard service to apps that support it (after screen init)
+	clipboard := newStandaloneClipboard(screen)
+	if ca, ok := app.(core.ClipboardAware); ok {
+		ca.SetClipboardService(clipboard)
+	}
+
 	if opts.OnInit != nil {
 		opts.OnInit(screen)
 	}
