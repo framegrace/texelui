@@ -127,12 +127,6 @@ func runApp(app core.App, opts Options) error {
 		exitMu.Unlock()
 	}()
 
-	// Provide clipboard service to apps that support it
-	clipboard := newStandaloneClipboard()
-	if ca, ok := app.(core.ClipboardAware); ok {
-		ca.SetClipboardService(clipboard)
-	}
-
 	screen, err := screenFactory()
 	if err != nil {
 		return fmt.Errorf("init screen: %w", err)
@@ -141,6 +135,12 @@ func runApp(app core.App, opts Options) error {
 		return fmt.Errorf("screen init: %w", err)
 	}
 	defer screen.Fini()
+
+	// Provide clipboard service to apps that support it (after screen init)
+	clipboard := newStandaloneClipboard(screen)
+	if ca, ok := app.(core.ClipboardAware); ok {
+		ca.SetClipboardService(clipboard)
+	}
 
 	if opts.OnInit != nil {
 		opts.OnInit(screen)
