@@ -332,7 +332,7 @@ func TestGrid_HandleKey_Tab(t *testing.T) {
 	}
 
 	// Shift+Tab backwards
-	ev = tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModShift)
+	ev = tcell.NewEventKey(tcell.KeyBacktab, 0, tcell.ModShift)
 	for expected := 4; expected >= 0; expected-- {
 		handled := g.HandleKey(ev)
 		if !handled || g.SelectedIdx != expected {
