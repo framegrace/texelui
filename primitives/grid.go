@@ -417,20 +417,19 @@ func (g *Grid) HandleKey(ev *tcell.EventKey) bool {
 		// gridContent.HandlePageNavigation for selection-based navigation
 		return g.scrollPane.HandleKey(ev)
 
+	case tcell.KeyBacktab:
+		// Shift+Tab: go backwards
+		if g.SelectedIdx > 0 {
+			g.SetSelected(g.SelectedIdx - 1)
+			return true
+		}
+		return false
+
 	case tcell.KeyTab:
-		// Tab: left-to-right, top-to-bottom sequential navigation
-		if ev.Modifiers()&tcell.ModShift != 0 {
-			// Shift+Tab: go backwards
-			if g.SelectedIdx > 0 {
-				g.SetSelected(g.SelectedIdx - 1)
-				return true
-			}
-		} else {
-			// Tab: go forwards
-			if g.SelectedIdx < len(g.Items)-1 {
-				g.SetSelected(g.SelectedIdx + 1)
-				return true
-			}
+		// Tab: go forwards
+		if g.SelectedIdx < len(g.Items)-1 {
+			g.SetSelected(g.SelectedIdx + 1)
+			return true
 		}
 		// At boundary, let parent handle
 		return false
