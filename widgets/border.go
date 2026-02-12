@@ -15,6 +15,13 @@ type Border struct {
     inv     func(core.Rect)
     // FocusedStyle optionally overrides Style when this border (or a focused descendant) is focused.
     FocusedStyle tcell.Style
+    // ResizingStyle applied when IsResizing is true. Takes priority over FocusedStyle.
+    ResizingStyle tcell.Style
+
+    // Title text displayed in top border row, left-aligned with padding.
+    Title string
+    // IsResizing indicates the border is in a resizing state.
+    IsResizing bool
 
     // SeparatorMode when true draws only edges where neighbors exist.
     // This is useful for status bars and section dividers.
@@ -57,6 +64,13 @@ func newBorderWithStyle(style tcell.Style) *Border {
 	ffg := tm.GetSemanticColor("border.active")
 	b.FocusedStyle = tcell.StyleDefault.Foreground(ffg).Background(bg)
 	b.SetFocusedStyle(tcell.StyleDefault.Foreground(ffg).Background(bg), true)
+
+	// Resizing style uses border.resizing semantic color
+	rfg := tm.GetSemanticColor("border.resizing")
+	if rfg == tcell.ColorDefault {
+		rfg = ffg
+	}
+	b.ResizingStyle = tcell.StyleDefault.Foreground(rfg).Background(bg)
 
 	// Default rounded corner charset
 	b.Charset = [6]rune{'─', '│', '╭', '╮', '╰', '╯'}
@@ -103,24 +117,62 @@ func (b *Border) Resize(w, h int) {
 }
 
 func (b *Border) Draw(p *core.Painter) {
-	style := b.Style
-	// If this border or any descendant contains focus, use FocusedStyle
-	if b.IsFocused() || core.IsDescendantFocused(b.Child) {
-		style = b.FocusedStyle
-	} else {
-		// Otherwise apply own focus style if enabled
-		style = b.EffectiveStyle(style)
-	}
+	style := b.determineStyle()
 
 	if b.SeparatorMode {
 		b.drawSeparator(p, style)
 	} else {
 		p.DrawBorder(b.Rect, style, b.Charset)
+		if b.Title != "" {
+			b.drawTitle(p, style)
+		}
 	}
 
 	if b.Child != nil {
 		b.Child.Draw(p)
 	}
+}
+
+// determineStyle returns the appropriate style based on state priority:
+// resizing > focused > normal.
+func (b *Border) determineStyle() tcell.Style {
+	if b.IsResizing {
+		return b.ResizingStyle
+	}
+	if b.IsFocused() || core.IsDescendantFocused(b.Child) {
+		return b.FocusedStyle
+	}
+	return b.EffectiveStyle(b.Style)
+}
+
+// drawTitle renders title text in the top border row with space padding.
+// The title is left-aligned at position X+1, truncated if needed.
+func (b *Border) drawTitle(p *core.Painter, style tcell.Style) {
+	if b.Rect.W <= 4 || b.Rect.H == 0 {
+		return
+	}
+
+	title := b.Title
+	maxLen := b.Rect.W - 4 // borders + padding spaces
+	if maxLen <= 0 {
+		return
+	}
+
+	titleRunes := []rune(title)
+	if len(titleRunes) > maxLen {
+		titleRunes = titleRunes[:maxLen]
+	}
+
+	// Render as " title " over the top border
+	x := b.Rect.X + 1
+	y := b.Rect.Y
+	p.SetCell(x, y, ' ', style)
+	x++
+	for _, ch := range titleRunes {
+		p.SetCell(x, y, ch, style)
+		x++
+	}
+	p.SetCell(x, y, ' ', style)
 }
 
 // drawSeparator draws only the edges where neighbors exist.
