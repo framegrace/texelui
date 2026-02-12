@@ -163,8 +163,9 @@ func createLayoutsTab() *widgets.Pane {
 	vbox.AddChild(widgets.NewButton("Second"))
 	vbox.AddChild(widgets.NewButton("Third"))
 
-	// Wrap in border for visibility
+	// Wrap in border with rounded corners
 	vboxBorder := widgets.NewBorder()
+	vboxBorder.Title = "Rounded"
 	vboxBorder.SetPosition(2, 4)
 	vboxBorder.Resize(20, 8)
 	vboxBorder.SetChild(vbox)
@@ -182,8 +183,10 @@ func createLayoutsTab() *widgets.Pane {
 	hbox.AddChild(widgets.NewButton("Center"))
 	hbox.AddChild(widgets.NewButton("Right"))
 
-	// Wrap in border for visibility
+	// Wrap in border with square corners
 	hboxBorder := widgets.NewBorder()
+	hboxBorder.Title = "Square"
+	hboxBorder.SetSquareCorners()
 	hboxBorder.SetPosition(30, 4)
 	hboxBorder.Resize(35, 3)
 	hboxBorder.SetChild(hbox)
@@ -212,6 +215,8 @@ func createLayoutsTab() *widgets.Pane {
 	outerHBox.AddChild(rightVBox)
 
 	nestedBorder := widgets.NewBorder()
+	nestedBorder.Title = "Nested"
+	nestedBorder.SetSquareCorners()
 	nestedBorder.SetPosition(2, 14)
 	nestedBorder.Resize(25, 5)
 	nestedBorder.SetChild(outerHBox)

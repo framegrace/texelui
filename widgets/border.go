@@ -79,6 +79,17 @@ func newBorderWithStyle(style tcell.Style) *Border {
 	return b
 }
 
+// SetRoundedCorners configures the border to use rounded corner characters (╭╮╰╯).
+// This is the default.
+func (b *Border) SetRoundedCorners() {
+	b.Charset = [6]rune{'─', '│', '╭', '╮', '╰', '╯'}
+}
+
+// SetSquareCorners configures the border to use square corner characters (┌┐└┘).
+func (b *Border) SetSquareCorners() {
+	b.Charset = [6]rune{'─', '│', '┌', '┐', '└', '┘'}
+}
+
 func (b *Border) ClientRect() core.Rect {
 	r := b.Rect
 	if r.W < 2 || r.H < 2 {
