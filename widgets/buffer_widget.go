@@ -24,8 +24,12 @@ func NewBufferWidget(buffer [][]core.Cell) *BufferWidget {
 }
 
 // SetBuffer updates the cell buffer to render.
+// The widget is resized to match the new buffer dimensions.
 func (w *BufferWidget) SetBuffer(buffer [][]core.Cell) {
 	w.buffer = buffer
+	if len(buffer) > 0 && len(buffer[0]) > 0 {
+		w.Resize(len(buffer[0]), len(buffer))
+	}
 }
 
 // Draw copies the buffer cells to the painter at the widget's position.
