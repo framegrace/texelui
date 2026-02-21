@@ -53,6 +53,10 @@ type StatusBar struct {
 
 	// DefaultMessageDuration is the default duration for messages
 	DefaultMessageDuration time.Duration
+
+	// ShowSeparator controls whether the top separator line is drawn.
+	// When false, the status bar is 1 row (content only).
+	ShowSeparator bool
 }
 
 // NewStatusBar creates a new status bar widget.
@@ -64,6 +68,7 @@ func NewStatusBar() *StatusBar {
 		messages:               make([]TimedMessage, 0, 10),
 		stopCh:                 make(chan struct{}),
 		DefaultMessageDuration: 3 * time.Second,
+		ShowSeparator:          true,
 	}
 	sb.SetPosition(0, 0)
 	sb.Resize(1, 2)        // 1 separator + 1 content row
@@ -309,13 +314,14 @@ func (s *StatusBar) Draw(p *core.Painter) {
 	bgStyle := tcell.StyleDefault.Foreground(fg).Background(bg)
 	sepStyle := tcell.StyleDefault.Foreground(sepFg).Background(bg)
 
-	// Row 0: Separator line
-	for x := 0; x < s.Rect.W; x++ {
-		p.SetCell(s.Rect.X+x, s.Rect.Y, '─', sepStyle)
+	contentY := s.Rect.Y
+	if s.ShowSeparator {
+		// Row 0: Separator line
+		for x := 0; x < s.Rect.W; x++ {
+			p.SetCell(s.Rect.X+x, s.Rect.Y, '─', sepStyle)
+		}
+		contentY++
 	}
-
-	// Row 1: Content (key hints left, messages right)
-	contentY := s.Rect.Y + 1
 	for x := 0; x < s.Rect.W; x++ {
 		p.SetCell(s.Rect.X+x, contentY, ' ', bgStyle)
 	}
@@ -515,7 +521,10 @@ func (s *StatusBar) SetLeftWidgets(widgets []core.Widget) {
 // Returns the total width consumed (for spacing right-side messages).
 // Must be called with s.mu held.
 func (s *StatusBar) layoutLeftWidgets() int {
-	contentY := s.Rect.Y + 1
+	contentY := s.Rect.Y
+	if s.ShowSeparator {
+		contentY++
+	}
 	xx := s.Rect.X + 1 // 1-char left padding
 	for i, w := range s.leftWidgets {
 		w.SetPosition(xx, contentY)
