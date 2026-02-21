@@ -328,6 +328,7 @@ func (s *StatusBar) Draw(p *core.Painter) {
 
 	s.mu.Lock()
 	hasLeftWidgets := len(s.leftWidgets) > 0
+	hoverHelp := s.hoverHelp
 	activeMsg := s.getActiveMessage()
 
 	var leftUsedWidth int
@@ -404,33 +405,38 @@ func (s *StatusBar) Draw(p *core.Painter) {
 		}
 	}
 
-	// Draw right text (messages) - right-aligned with level-based coloring
-	if activeMsg != nil {
-		rightText := activeMsg.Text
-		rightRunes := []rune(rightText)
+	// Draw right text - hover help takes priority over queued messages
+	var rightText string
+	var rightLevel MessageLevel
+	if hoverHelp != "" {
+		rightText = hoverHelp
+		rightLevel = MessageInfo
+	} else if activeMsg != nil {
+		rightText = activeMsg.Text
+		rightLevel = activeMsg.Level
+	}
 
-		if len(rightRunes) > 0 {
-			msgStyle := s.getMessageStyle(activeMsg.Level, bg)
+	if rightRunes := []rune(rightText); len(rightRunes) > 0 {
+		msgStyle := s.getMessageStyle(rightLevel, bg)
 
-			// Calculate right-aligned position
-			rightX := s.Rect.X + s.Rect.W - len(rightRunes) - 1
+		// Calculate right-aligned position
+		rightX := s.Rect.X + s.Rect.W - len(rightRunes) - 1
 
-			// Check if message needs truncation
-			minX := s.Rect.X + leftUsedWidth + 3
-			if rightX < minX {
-				maxLen := s.Rect.W - leftUsedWidth - 4
-				if maxLen > 3 && maxLen-1 < len(rightRunes) {
-					rightText = string(rightRunes[:maxLen-1]) + "…"
-					rightRunes = []rune(rightText)
-					rightX = s.Rect.X + s.Rect.W - len(rightRunes) - 1
-				} else if maxLen <= 3 {
-					rightText = "" // Not enough space
-				}
+		// Check if message needs truncation
+		minX := s.Rect.X + leftUsedWidth + 3
+		if rightX < minX {
+			maxLen := s.Rect.W - leftUsedWidth - 4
+			if maxLen > 3 && maxLen-1 < len(rightRunes) {
+				rightText = string(rightRunes[:maxLen-1]) + "…"
+				rightRunes = []rune(rightText)
+				rightX = s.Rect.X + s.Rect.W - len(rightRunes) - 1
+			} else if maxLen <= 3 {
+				rightText = "" // Not enough space
 			}
+		}
 
-			if rightText != "" {
-				p.DrawText(rightX, contentY, rightText, msgStyle)
-			}
+		if rightText != "" {
+			p.DrawText(rightX, contentY, rightText, msgStyle)
 		}
 	}
 }
@@ -589,27 +595,16 @@ func (s *StatusBar) setHoverHelp(text string) {
 		return
 	}
 	s.hoverHelp = text
-	s.messages = append(s.messages, TimedMessage{
-		Text:      text,
-		Level:     MessageInfo,
-		ExpiresAt: time.Now().Add(30 * time.Second),
-	})
 	s.mu.Unlock()
 	s.invalidate()
 }
 
-// clearHoverHelp removes any active hover help message.
+// clearHoverHelp removes any active hover help.
 func (s *StatusBar) clearHoverHelp() {
 	s.mu.Lock()
 	if s.hoverHelp == "" {
 		s.mu.Unlock()
 		return
-	}
-	for i, m := range s.messages {
-		if m.Text == s.hoverHelp {
-			s.messages = append(s.messages[:i], s.messages[i+1:]...)
-			break
-		}
 	}
 	s.hoverHelp = ""
 	s.mu.Unlock()
