@@ -1,6 +1,8 @@
 package widgets
 
 import (
+	"unicode/utf8"
+
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/theme"
 	"github.com/gdamore/tcell/v2"
@@ -45,7 +47,7 @@ func NewToggleButton(label string) *ToggleButton {
 	tb.Style = tcell.StyleDefault.Foreground(fg).Background(bg)
 
 	tb.SetPosition(0, 0)
-	tb.Resize(len(label), 1)
+	tb.Resize(utf8.RuneCountInString(label), 1)
 	tb.SetFocusable(false)
 
 	return tb
