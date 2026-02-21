@@ -52,15 +52,18 @@ func NewToggleButton(label string) *ToggleButton {
 }
 
 // Draw renders the toggle button label with normal, reversed, or faded style.
+// Disabled+Active shows a faded reversed style (visible but non-interactive).
 func (tb *ToggleButton) Draw(painter *core.Painter) {
 	style := tb.EffectiveStyle(tb.Style)
-	if tb.Disabled {
-		fg, bg, _ := style.Decompose()
-		style = tcell.StyleDefault.Foreground(fadeColor(fg, bg, 0.35)).Background(bg)
-	} else if tb.Active {
-		fg, bg, attr := style.Decompose()
-		style = tcell.StyleDefault.Foreground(bg).Background(fg).Attributes(attr)
+	fg, bg, attr := style.Decompose()
+	if tb.Active {
+		fg, bg = bg, fg
 	}
+	if tb.Disabled {
+		fg = fadeColor(fg, bg, 0.35)
+		attr = 0
+	}
+	style = tcell.StyleDefault.Foreground(fg).Background(bg).Attributes(attr)
 	painter.Fill(core.Rect{X: tb.Rect.X, Y: tb.Rect.Y, W: tb.Rect.W, H: 1}, ' ', style)
 	painter.DrawText(tb.Rect.X, tb.Rect.Y, tb.Label, style)
 }
