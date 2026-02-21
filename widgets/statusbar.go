@@ -43,6 +43,7 @@ type StatusBar struct {
 	leftWidgets   []core.Widget  // Child widgets for left side (overrides leftText)
 	messages      []TimedMessage // Message queue, highest priority shown
 	focusedWidget core.Widget    // Currently focused widget for hint extraction
+	hoverHelp     string         // Currently displayed hover help text (empty = none)
 
 	inv      func(core.Rect)
 	ticker   *time.Ticker
@@ -527,11 +528,13 @@ func (s *StatusBar) layoutLeftWidgets() int {
 	return xx - (s.Rect.X + 1) // total width consumed
 }
 
-// HandleMouse forwards mouse events to left-side widgets.
+// HandleMouse forwards mouse events to left-side widgets and shows
+// hover help text from any widget implementing core.HelpTextProvider.
 // Returns true if a widget handled the event.
 func (s *StatusBar) HandleMouse(ev *tcell.EventMouse) bool {
 	x, y := ev.Position()
 	if !s.Rect.Contains(x, y) {
+		s.clearHoverHelp()
 		return false
 	}
 
@@ -540,6 +543,24 @@ func (s *StatusBar) HandleMouse(ev *tcell.EventMouse) bool {
 	copy(widgets, s.leftWidgets)
 	s.mu.Unlock()
 
+	// Check hover help for all widgets (works on motion and click events)
+	helpFound := false
+	for _, w := range widgets {
+		if w.HitTest(x, y) {
+			if hp, ok := w.(core.HelpTextProvider); ok {
+				if ht := hp.HelpText(); ht != "" {
+					s.setHoverHelp(ht)
+					helpFound = true
+				}
+			}
+			break
+		}
+	}
+	if !helpFound {
+		s.clearHoverHelp()
+	}
+
+	// Forward click events to widgets
 	for _, w := range widgets {
 		if ma, ok := w.(core.MouseAware); ok {
 			if ma.HandleMouse(ev) {
@@ -548,5 +569,40 @@ func (s *StatusBar) HandleMouse(ev *tcell.EventMouse) bool {
 			}
 		}
 	}
-	return false
+	return helpFound
+}
+
+// setHoverHelp shows help text if it differs from the current hover help.
+func (s *StatusBar) setHoverHelp(text string) {
+	s.mu.Lock()
+	if s.hoverHelp == text {
+		s.mu.Unlock()
+		return
+	}
+	s.hoverHelp = text
+	s.messages = append(s.messages, TimedMessage{
+		Text:      text,
+		Level:     MessageInfo,
+		ExpiresAt: time.Now().Add(30 * time.Second),
+	})
+	s.mu.Unlock()
+	s.invalidate()
+}
+
+// clearHoverHelp removes any active hover help message.
+func (s *StatusBar) clearHoverHelp() {
+	s.mu.Lock()
+	if s.hoverHelp == "" {
+		s.mu.Unlock()
+		return
+	}
+	for i, m := range s.messages {
+		if m.Text == s.hoverHelp {
+			s.messages = append(s.messages[:i], s.messages[i+1:]...)
+			break
+		}
+	}
+	s.hoverHelp = ""
+	s.mu.Unlock()
+	s.invalidate()
 }
