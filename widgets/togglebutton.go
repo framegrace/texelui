@@ -9,10 +9,12 @@ import (
 // ToggleButton is a compact clickable indicator that shows on/off state.
 // Designed for status bar mode indicators (e.g., "TFM", "WRP", "INS").
 // Active state renders with reversed colors (FG/BG swapped).
+// Disabled buttons render with faded colors and ignore clicks.
 type ToggleButton struct {
 	core.BaseWidget
 	Label    string
 	Active   bool
+	Disabled bool
 	OnToggle func(active bool)
 	Style    tcell.Style
 
@@ -49,10 +51,13 @@ func NewToggleButton(label string) *ToggleButton {
 	return tb
 }
 
-// Draw renders the toggle button label with normal or reversed style.
+// Draw renders the toggle button label with normal, reversed, or faded style.
 func (tb *ToggleButton) Draw(painter *core.Painter) {
 	style := tb.EffectiveStyle(tb.Style)
-	if tb.Active {
+	if tb.Disabled {
+		fg, bg, _ := style.Decompose()
+		style = tcell.StyleDefault.Foreground(fadeColor(fg, bg, 0.35)).Background(bg)
+	} else if tb.Active {
 		fg, bg, attr := style.Decompose()
 		style = tcell.StyleDefault.Foreground(bg).Background(fg).Attributes(attr)
 	}
@@ -60,8 +65,22 @@ func (tb *ToggleButton) Draw(painter *core.Painter) {
 	painter.DrawText(tb.Rect.X, tb.Rect.Y, tb.Label, style)
 }
 
+// fadeColor blends fg toward bg by ratio (0 = fg, 1 = bg).
+func fadeColor(fg, bg tcell.Color, ratio float64) tcell.Color {
+	fr, ffg, fb := fg.RGB()
+	br, bbg, bb := bg.RGB()
+	mix := func(a, b int32, r float64) int32 {
+		return a + int32(float64(b-a)*r)
+	}
+	return tcell.NewRGBColor(mix(fr, br, ratio), mix(ffg, bbg, ratio), mix(fb, bb, ratio))
+}
+
 // HandleMouse processes mouse input. Left click toggles the active state.
+// Disabled buttons ignore all mouse input.
 func (tb *ToggleButton) HandleMouse(ev *tcell.EventMouse) bool {
+	if tb.Disabled {
+		return false
+	}
 	x, y := ev.Position()
 	if !tb.HitTest(x, y) {
 		return false
