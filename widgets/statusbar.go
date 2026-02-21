@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gdamore/tcell/v2"
-	"github.com/framegrace/texelui/theme"
 	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/theme"
+	"github.com/gdamore/tcell/v2"
 )
 
 // MessageLevel defines the priority/styling of status messages.
@@ -38,16 +38,17 @@ type TimedMessage struct {
 type StatusBar struct {
 	core.BaseWidget
 
-	mu           sync.Mutex
-	leftText     string         // Current key hints (formatted)
-	messages     []TimedMessage // Message queue, highest priority shown
-	focusedWidget core.Widget   // Currently focused widget for hint extraction
+	mu            sync.Mutex
+	leftText      string         // Current key hints (formatted)
+	leftWidgets   []core.Widget  // Child widgets for left side (overrides leftText)
+	messages      []TimedMessage // Message queue, highest priority shown
+	focusedWidget core.Widget    // Currently focused widget for hint extraction
 
 	inv      func(core.Rect)
 	ticker   *time.Ticker
 	stopCh   chan struct{}
-	stopped  bool           // Tracks if Stop() has been called
-	notifier chan<- bool    // Refresh notifier from UIManager
+	stopped  bool        // Tracks if Stop() has been called
+	notifier chan<- bool // Refresh notifier from UIManager
 
 	// DefaultMessageDuration is the default duration for messages
 	DefaultMessageDuration time.Duration
@@ -64,7 +65,7 @@ func NewStatusBar() *StatusBar {
 		DefaultMessageDuration: 3 * time.Second,
 	}
 	sb.SetPosition(0, 0)
-	sb.Resize(1, 2) // 1 separator + 1 content row
+	sb.Resize(1, 2)        // 1 separator + 1 content row
 	sb.SetFocusable(false) // Status bar never receives focus
 	return sb
 }
@@ -319,87 +320,110 @@ func (s *StatusBar) Draw(p *core.Painter) {
 	}
 
 	s.mu.Lock()
-	// Refresh key hints on every draw to catch internal focus changes
-	// (e.g., TabLayout switching between tab bar and content)
-	s.updateKeyHintsLocked()
-	leftText := s.leftText
+	hasLeftWidgets := len(s.leftWidgets) > 0
 	activeMsg := s.getActiveMessage()
-	s.mu.Unlock()
 
-	// Get rune slices for proper UTF-8 handling
-	leftRunes := []rune(leftText)
-	var rightText string
-	var rightRunes []rune
-	if activeMsg != nil {
-		rightText = activeMsg.Text
-		rightRunes = []rune(rightText)
-	}
+	var leftUsedWidth int
+	if hasLeftWidgets {
+		// Layout and copy child widgets under the lock
+		leftUsedWidth = s.layoutLeftWidgets()
+		widgets := make([]core.Widget, len(s.leftWidgets))
+		copy(widgets, s.leftWidgets)
+		s.mu.Unlock()
 
-	// Calculate available space
-	availableWidth := s.Rect.W - 2 // 1 char padding on each side
-
-	// Only truncate key hints if there's a message that needs space
-	if len(rightRunes) > 0 {
-		// Reserve space for message + gap (3 chars gap between hints and message)
-		msgSpace := len(rightRunes) + 3
-		maxLeft := availableWidth - msgSpace
-		if maxLeft < 1 {
-			maxLeft = 1
-		}
-		if len(leftRunes) > maxLeft {
-			if maxLeft > 1 {
-				leftText = string(leftRunes[:maxLeft-1]) + "…"
-				leftRunes = []rune(leftText)
-			} else {
-				leftText = "…"
-				leftRunes = []rune(leftText)
-			}
+		// Draw each widget outside the lock
+		for _, w := range widgets {
+			w.Draw(p)
 		}
 	} else {
-		// No message - only truncate if hints exceed available width
-		if len(leftRunes) > availableWidth {
-			if availableWidth > 1 {
-				leftText = string(leftRunes[:availableWidth-1]) + "…"
-				leftRunes = []rune(leftText)
-			} else {
-				leftText = "…"
-				leftRunes = []rune(leftText)
+		// Refresh key hints on every draw to catch internal focus changes
+		// (e.g., TabLayout switching between tab bar and content)
+		s.updateKeyHintsLocked()
+		leftText := s.leftText
+		s.mu.Unlock()
+
+		// Get rune slices for proper UTF-8 handling
+		leftRunes := []rune(leftText)
+		var rightText string
+		var rightRunes []rune
+		if activeMsg != nil {
+			rightText = activeMsg.Text
+			rightRunes = []rune(rightText)
+		}
+
+		// Calculate available space
+		availableWidth := s.Rect.W - 2 // 1 char padding on each side
+
+		// Only truncate key hints if there's a message that needs space
+		if len(rightRunes) > 0 {
+			// Reserve space for message + gap (3 chars gap between hints and message)
+			msgSpace := len(rightRunes) + 3
+			maxLeft := availableWidth - msgSpace
+			if maxLeft < 1 {
+				maxLeft = 1
+			}
+			if len(leftRunes) > maxLeft {
+				if maxLeft > 1 {
+					leftText = string(leftRunes[:maxLeft-1]) + "…"
+					leftRunes = []rune(leftText)
+				} else {
+					leftText = "…"
+					leftRunes = []rune(leftText)
+				}
+			}
+		} else {
+			// No message - only truncate if hints exceed available width
+			if len(leftRunes) > availableWidth {
+				if availableWidth > 1 {
+					leftText = string(leftRunes[:availableWidth-1]) + "…"
+					leftRunes = []rune(leftText)
+				} else {
+					leftText = "…"
+					leftRunes = []rune(leftText)
+				}
 			}
 		}
-	}
 
-	// Draw left text (key hints) - dimmed style
-	if leftText != "" {
-		hintFg := tm.GetSemanticColor("text.secondary")
-		if hintFg == tcell.ColorDefault {
-			hintFg = tcell.ColorGray
+		leftUsedWidth = len(leftRunes)
+
+		// Draw left text (key hints) - dimmed style
+		if leftText != "" {
+			hintFg := tm.GetSemanticColor("text.secondary")
+			if hintFg == tcell.ColorDefault {
+				hintFg = tcell.ColorGray
+			}
+			hintStyle := tcell.StyleDefault.Foreground(hintFg).Background(bg)
+			p.DrawText(s.Rect.X+1, contentY, leftText, hintStyle)
 		}
-		hintStyle := tcell.StyleDefault.Foreground(hintFg).Background(bg)
-		p.DrawText(s.Rect.X+1, contentY, leftText, hintStyle)
 	}
 
 	// Draw right text (messages) - right-aligned with level-based coloring
-	if activeMsg != nil && rightText != "" {
-		msgStyle := s.getMessageStyle(activeMsg.Level, bg)
+	if activeMsg != nil {
+		rightText := activeMsg.Text
+		rightRunes := []rune(rightText)
 
-		// Calculate right-aligned position
-		rightX := s.Rect.X + s.Rect.W - len(rightRunes) - 1
+		if len(rightRunes) > 0 {
+			msgStyle := s.getMessageStyle(activeMsg.Level, bg)
 
-		// Check if message needs truncation (shouldn't happen after hint truncation, but safety check)
-		minX := s.Rect.X + len(leftRunes) + 3
-		if rightX < minX {
-			maxLen := s.Rect.W - len(leftRunes) - 4
-			if maxLen > 3 && maxLen-1 < len(rightRunes) {
-				rightText = string(rightRunes[:maxLen-1]) + "…"
-				rightRunes = []rune(rightText)
-				rightX = s.Rect.X + s.Rect.W - len(rightRunes) - 1
-			} else if maxLen <= 3 {
-				rightText = "" // Not enough space
+			// Calculate right-aligned position
+			rightX := s.Rect.X + s.Rect.W - len(rightRunes) - 1
+
+			// Check if message needs truncation
+			minX := s.Rect.X + leftUsedWidth + 3
+			if rightX < minX {
+				maxLen := s.Rect.W - leftUsedWidth - 4
+				if maxLen > 3 && maxLen-1 < len(rightRunes) {
+					rightText = string(rightRunes[:maxLen-1]) + "…"
+					rightRunes = []rune(rightText)
+					rightX = s.Rect.X + s.Rect.W - len(rightRunes) - 1
+				} else if maxLen <= 3 {
+					rightText = "" // Not enough space
+				}
 			}
-		}
 
-		if rightText != "" {
-			p.DrawText(rightX, contentY, rightText, msgStyle)
+			if rightText != "" {
+				p.DrawText(rightX, contentY, rightText, msgStyle)
+			}
 		}
 	}
 }
@@ -473,4 +497,56 @@ func (s *StatusBar) ClearKeyHints() {
 	s.leftText = ""
 	s.mu.Unlock()
 	s.invalidate()
+}
+
+// SetLeftWidgets sets widgets to display on the left side of the status bar.
+// Widgets are positioned left-to-right with 1-char gaps during Draw.
+// Takes priority over KeyHintsProvider hints when set.
+// Pass nil to clear and revert to KeyHintsProvider behavior.
+func (s *StatusBar) SetLeftWidgets(widgets []core.Widget) {
+	s.mu.Lock()
+	s.leftWidgets = widgets
+	s.mu.Unlock()
+	s.invalidate()
+}
+
+// layoutLeftWidgets positions left-side widgets sequentially on the content row.
+// Returns the total width consumed (for spacing right-side messages).
+// Must be called with s.mu held.
+func (s *StatusBar) layoutLeftWidgets() int {
+	contentY := s.Rect.Y + 1
+	xx := s.Rect.X + 1 // 1-char left padding
+	for i, w := range s.leftWidgets {
+		w.SetPosition(xx, contentY)
+		ww, _ := w.Size()
+		xx += ww
+		if i < len(s.leftWidgets)-1 {
+			xx++ // 1-char gap between widgets
+		}
+	}
+	return xx - (s.Rect.X + 1) // total width consumed
+}
+
+// HandleMouse forwards mouse events to left-side widgets.
+// Returns true if a widget handled the event.
+func (s *StatusBar) HandleMouse(ev *tcell.EventMouse) bool {
+	x, y := ev.Position()
+	if !s.Rect.Contains(x, y) {
+		return false
+	}
+
+	s.mu.Lock()
+	widgets := make([]core.Widget, len(s.leftWidgets))
+	copy(widgets, s.leftWidgets)
+	s.mu.Unlock()
+
+	for _, w := range widgets {
+		if ma, ok := w.(core.MouseAware); ok {
+			if ma.HandleMouse(ev) {
+				s.invalidate()
+				return true
+			}
+		}
+	}
+	return false
 }
