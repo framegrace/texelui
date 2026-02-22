@@ -44,6 +44,7 @@ type StatusBar struct {
 	messages      []TimedMessage // Message queue, highest priority shown
 	focusedWidget core.Widget    // Currently focused widget for hint extraction
 	hoverHelp     string         // Currently displayed hover help text (empty = none)
+	hintText      string         // Persistent hint text (shown on right when no hover help or message)
 
 	inv      func(core.Rect)
 	ticker   *time.Ticker
@@ -329,6 +330,7 @@ func (s *StatusBar) Draw(p *core.Painter) {
 	s.mu.Lock()
 	hasLeftWidgets := len(s.leftWidgets) > 0
 	hoverHelp := s.hoverHelp
+	hintText := s.hintText
 	activeMsg := s.getActiveMessage()
 
 	var leftUsedWidth int
@@ -405,7 +407,7 @@ func (s *StatusBar) Draw(p *core.Painter) {
 		}
 	}
 
-	// Draw right text - hover help takes priority over queued messages
+	// Draw right text - priority: hover help > timed messages > persistent hints
 	var rightText string
 	var rightLevel MessageLevel
 	if hoverHelp != "" {
@@ -414,6 +416,9 @@ func (s *StatusBar) Draw(p *core.Painter) {
 	} else if activeMsg != nil {
 		rightText = activeMsg.Text
 		rightLevel = activeMsg.Level
+	} else if hintText != "" {
+		rightText = hintText
+		rightLevel = MessageInfo
 	}
 
 	if rightRunes := []rune(rightText); len(rightRunes) > 0 {
@@ -585,6 +590,35 @@ func (s *StatusBar) HandleMouse(ev *tcell.EventMouse) bool {
 		}
 	}
 	return helpFound
+}
+
+// SetHoverHelp shows hover help text in the status bar.
+// Use ClearHoverHelp to remove it.
+func (s *StatusBar) SetHoverHelp(text string) {
+	s.setHoverHelp(text)
+}
+
+// ClearHoverHelp removes any active hover help text.
+func (s *StatusBar) ClearHoverHelp() {
+	s.clearHoverHelp()
+}
+
+// SetHintText sets persistent hint text on the right side of the status bar.
+// Shown when no hover help or timed message is active. Use ClearHintText to remove.
+func (s *StatusBar) SetHintText(text string) {
+	s.mu.Lock()
+	if s.hintText == text {
+		s.mu.Unlock()
+		return
+	}
+	s.hintText = text
+	s.mu.Unlock()
+	s.invalidate()
+}
+
+// ClearHintText removes any persistent hint text.
+func (s *StatusBar) ClearHintText() {
+	s.SetHintText("")
 }
 
 // setHoverHelp shows help text if it differs from the current hover help.
