@@ -43,6 +43,8 @@ type StatusBar struct {
 	leftWidgets   []core.Widget  // Child widgets for left side (overrides leftText)
 	messages      []TimedMessage // Message queue, highest priority shown
 	focusedWidget core.Widget    // Currently focused widget for hint extraction
+	hoverHelp     string         // Currently displayed hover help text (empty = none)
+	hintText      string         // Persistent hint text (shown on right when no hover help or message)
 
 	inv      func(core.Rect)
 	ticker   *time.Ticker
@@ -52,6 +54,10 @@ type StatusBar struct {
 
 	// DefaultMessageDuration is the default duration for messages
 	DefaultMessageDuration time.Duration
+
+	// ShowSeparator controls whether the top separator line is drawn.
+	// When false, the status bar is 1 row (content only).
+	ShowSeparator bool
 }
 
 // NewStatusBar creates a new status bar widget.
@@ -63,6 +69,7 @@ func NewStatusBar() *StatusBar {
 		messages:               make([]TimedMessage, 0, 10),
 		stopCh:                 make(chan struct{}),
 		DefaultMessageDuration: 3 * time.Second,
+		ShowSeparator:          true,
 	}
 	sb.SetPosition(0, 0)
 	sb.Resize(1, 2)        // 1 separator + 1 content row
@@ -308,19 +315,22 @@ func (s *StatusBar) Draw(p *core.Painter) {
 	bgStyle := tcell.StyleDefault.Foreground(fg).Background(bg)
 	sepStyle := tcell.StyleDefault.Foreground(sepFg).Background(bg)
 
-	// Row 0: Separator line
-	for x := 0; x < s.Rect.W; x++ {
-		p.SetCell(s.Rect.X+x, s.Rect.Y, '─', sepStyle)
+	contentY := s.Rect.Y
+	if s.ShowSeparator {
+		// Row 0: Separator line
+		for x := 0; x < s.Rect.W; x++ {
+			p.SetCell(s.Rect.X+x, s.Rect.Y, '─', sepStyle)
+		}
+		contentY++
 	}
-
-	// Row 1: Content (key hints left, messages right)
-	contentY := s.Rect.Y + 1
 	for x := 0; x < s.Rect.W; x++ {
 		p.SetCell(s.Rect.X+x, contentY, ' ', bgStyle)
 	}
 
 	s.mu.Lock()
 	hasLeftWidgets := len(s.leftWidgets) > 0
+	hoverHelp := s.hoverHelp
+	hintText := s.hintText
 	activeMsg := s.getActiveMessage()
 
 	var leftUsedWidth int
@@ -397,33 +407,41 @@ func (s *StatusBar) Draw(p *core.Painter) {
 		}
 	}
 
-	// Draw right text (messages) - right-aligned with level-based coloring
-	if activeMsg != nil {
-		rightText := activeMsg.Text
-		rightRunes := []rune(rightText)
+	// Draw right text - priority: hover help > timed messages > persistent hints
+	var rightText string
+	var rightLevel MessageLevel
+	if hoverHelp != "" {
+		rightText = hoverHelp
+		rightLevel = MessageInfo
+	} else if activeMsg != nil {
+		rightText = activeMsg.Text
+		rightLevel = activeMsg.Level
+	} else if hintText != "" {
+		rightText = hintText
+		rightLevel = MessageInfo
+	}
 
-		if len(rightRunes) > 0 {
-			msgStyle := s.getMessageStyle(activeMsg.Level, bg)
+	if rightRunes := []rune(rightText); len(rightRunes) > 0 {
+		msgStyle := s.getMessageStyle(rightLevel, bg)
 
-			// Calculate right-aligned position
-			rightX := s.Rect.X + s.Rect.W - len(rightRunes) - 1
+		// Calculate right-aligned position
+		rightX := s.Rect.X + s.Rect.W - len(rightRunes) - 1
 
-			// Check if message needs truncation
-			minX := s.Rect.X + leftUsedWidth + 3
-			if rightX < minX {
-				maxLen := s.Rect.W - leftUsedWidth - 4
-				if maxLen > 3 && maxLen-1 < len(rightRunes) {
-					rightText = string(rightRunes[:maxLen-1]) + "…"
-					rightRunes = []rune(rightText)
-					rightX = s.Rect.X + s.Rect.W - len(rightRunes) - 1
-				} else if maxLen <= 3 {
-					rightText = "" // Not enough space
-				}
+		// Check if message needs truncation
+		minX := s.Rect.X + leftUsedWidth + 3
+		if rightX < minX {
+			maxLen := s.Rect.W - leftUsedWidth - 4
+			if maxLen > 3 && maxLen-1 < len(rightRunes) {
+				rightText = string(rightRunes[:maxLen-1]) + "…"
+				rightRunes = []rune(rightText)
+				rightX = s.Rect.X + s.Rect.W - len(rightRunes) - 1
+			} else if maxLen <= 3 {
+				rightText = "" // Not enough space
 			}
+		}
 
-			if rightText != "" {
-				p.DrawText(rightX, contentY, rightText, msgStyle)
-			}
+		if rightText != "" {
+			p.DrawText(rightX, contentY, rightText, msgStyle)
 		}
 	}
 }
@@ -514,7 +532,10 @@ func (s *StatusBar) SetLeftWidgets(widgets []core.Widget) {
 // Returns the total width consumed (for spacing right-side messages).
 // Must be called with s.mu held.
 func (s *StatusBar) layoutLeftWidgets() int {
-	contentY := s.Rect.Y + 1
+	contentY := s.Rect.Y
+	if s.ShowSeparator {
+		contentY++
+	}
 	xx := s.Rect.X + 1 // 1-char left padding
 	for i, w := range s.leftWidgets {
 		w.SetPosition(xx, contentY)
@@ -527,11 +548,13 @@ func (s *StatusBar) layoutLeftWidgets() int {
 	return xx - (s.Rect.X + 1) // total width consumed
 }
 
-// HandleMouse forwards mouse events to left-side widgets.
+// HandleMouse forwards mouse events to left-side widgets and shows
+// hover help text from any widget implementing core.HelpTextProvider.
 // Returns true if a widget handled the event.
 func (s *StatusBar) HandleMouse(ev *tcell.EventMouse) bool {
 	x, y := ev.Position()
 	if !s.Rect.Contains(x, y) {
+		s.clearHoverHelp()
 		return false
 	}
 
@@ -540,6 +563,24 @@ func (s *StatusBar) HandleMouse(ev *tcell.EventMouse) bool {
 	copy(widgets, s.leftWidgets)
 	s.mu.Unlock()
 
+	// Check hover help for all widgets (works on motion and click events)
+	helpFound := false
+	for _, w := range widgets {
+		if w.HitTest(x, y) {
+			if hp, ok := w.(core.HelpTextProvider); ok {
+				if ht := hp.HelpText(); ht != "" {
+					s.setHoverHelp(ht)
+					helpFound = true
+				}
+			}
+			break
+		}
+	}
+	if !helpFound {
+		s.clearHoverHelp()
+	}
+
+	// Forward click events to widgets
 	for _, w := range widgets {
 		if ma, ok := w.(core.MouseAware); ok {
 			if ma.HandleMouse(ev) {
@@ -548,5 +589,58 @@ func (s *StatusBar) HandleMouse(ev *tcell.EventMouse) bool {
 			}
 		}
 	}
-	return false
+	return helpFound
+}
+
+// SetHoverHelp shows hover help text in the status bar.
+// Use ClearHoverHelp to remove it.
+func (s *StatusBar) SetHoverHelp(text string) {
+	s.setHoverHelp(text)
+}
+
+// ClearHoverHelp removes any active hover help text.
+func (s *StatusBar) ClearHoverHelp() {
+	s.clearHoverHelp()
+}
+
+// SetHintText sets persistent hint text on the right side of the status bar.
+// Shown when no hover help or timed message is active. Use ClearHintText to remove.
+func (s *StatusBar) SetHintText(text string) {
+	s.mu.Lock()
+	if s.hintText == text {
+		s.mu.Unlock()
+		return
+	}
+	s.hintText = text
+	s.mu.Unlock()
+	s.invalidate()
+}
+
+// ClearHintText removes any persistent hint text.
+func (s *StatusBar) ClearHintText() {
+	s.SetHintText("")
+}
+
+// setHoverHelp shows help text if it differs from the current hover help.
+func (s *StatusBar) setHoverHelp(text string) {
+	s.mu.Lock()
+	if s.hoverHelp == text {
+		s.mu.Unlock()
+		return
+	}
+	s.hoverHelp = text
+	s.mu.Unlock()
+	s.invalidate()
+}
+
+// clearHoverHelp removes any active hover help.
+func (s *StatusBar) clearHoverHelp() {
+	s.mu.Lock()
+	if s.hoverHelp == "" {
+		s.mu.Unlock()
+		return
+	}
+	s.hoverHelp = ""
+	s.mu.Unlock()
+	s.invalidate()
 }

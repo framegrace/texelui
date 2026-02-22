@@ -29,6 +29,7 @@ type BaseWidget struct {
 	focused   bool
 	focusable bool
 	zIndex    int // z-ordering: higher values draw on top
+	helpText  string
 	// Optional focus styling: if enabled, widgets may use FocusedStyle when focused.
 	focusStyleEnabled bool
 	focusedStyle      tcell.Style
@@ -59,6 +60,8 @@ func (b *BaseWidget) HitTest(x, y int) bool             { return b.Rect.Contains
 func (b *BaseWidget) HandleKey(ev *tcell.EventKey) bool { return false }
 func (b *BaseWidget) ZIndex() int                       { return b.zIndex }
 func (b *BaseWidget) SetZIndex(z int)                   { b.zIndex = z }
+func (b *BaseWidget) HelpText() string                  { return b.helpText }
+func (b *BaseWidget) SetHelpText(text string)            { b.helpText = text }
 
 // SetFocusedStyle enables or disables focused styling and sets the focused style value.
 func (b *BaseWidget) SetFocusedStyle(style tcell.Style, enabled bool) {
@@ -155,6 +158,14 @@ type FocusObserver interface {
 	// OnFocusChanged is called when the focused widget changes.
 	// The focused parameter may be nil if no widget has focus.
 	OnFocusChanged(focused Widget)
+}
+
+// HelpTextProvider is implemented by widgets that provide hover help text.
+// BaseWidget implements this by default, so all widgets support it.
+// Containers like StatusBar can check for this on mouse hover and display
+// the help text.
+type HelpTextProvider interface {
+	HelpText() string
 }
 
 // FocusCycleBlocker is implemented by widgets that may want to prevent
