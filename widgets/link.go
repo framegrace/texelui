@@ -80,6 +80,15 @@ func (l *Link) HandleKey(ev *tcell.EventKey) bool {
 	return false
 }
 
+// HandleMouse processes mouse input. Left click triggers the OnClick callback.
+func (l *Link) HandleMouse(ev *tcell.EventMouse) bool {
+	if ev.Buttons()&tcell.Button1 != 0 {
+		l.activate()
+		return true
+	}
+	return false
+}
+
 // activate triggers the OnClick callback if set.
 func (l *Link) activate() {
 	if l.OnClick != nil {
