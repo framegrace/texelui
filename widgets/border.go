@@ -292,6 +292,22 @@ func (b *Border) Blur() {
 	b.BaseWidget.Blur()
 }
 
+// CycleFocus implements core.FocusCycler by delegating to the child.
+func (b *Border) CycleFocus(forward bool) bool {
+	if b.Child == nil {
+		return false
+	}
+	if fc, ok := b.Child.(core.FocusCycler); ok {
+		return fc.CycleFocus(forward)
+	}
+	return false
+}
+
+// TrapsFocus implements core.FocusCycler.
+func (b *Border) TrapsFocus() bool {
+	return false
+}
+
 // HandleKey routes key events to the child.
 func (b *Border) HandleKey(ev *tcell.EventKey) bool {
 	if b.Child != nil {
