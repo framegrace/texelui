@@ -13,17 +13,21 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-// Image renders an image using half-block characters for block art.
+// Image renders an image using half-block characters for block art,
+// or via Kitty graphics protocol when a capable provider is available.
 // Each cell represents two vertical pixels using the upper-half-block character
 // (\u2580), with the foreground color for the top pixel and background for the
 // bottom pixel.
 type Image struct {
 	core.BaseWidget
-	imgData []byte
-	altText string
-	decoded image.Image
-	valid   bool
-	style   tcell.Style
+	imgData  []byte
+	pngBytes []byte // raw PNG bytes retained for Kitty (f=100)
+	altText  string
+	decoded  image.Image
+	valid    bool
+	style    tcell.Style
+	imageID  uint32    // Kitty image ID (0 = not yet allocated)
+	lastRect core.Rect // last placed rect for move detection
 
 	// Invalidation callback
 	inv func(core.Rect)
@@ -44,19 +48,23 @@ func NewImage(imgData []byte, altText string) *Image {
 	}
 	img.SetFocusable(false)
 
-	// Try to decode the image. On success, discard the raw bytes
-	// since only the decoded image is needed for rendering.
+	// Try to decode the image. On success, keep the raw PNG bytes
+	// for Kitty graphics (f=100) but discard the original reference.
 	decoded, _, err := image.Decode(bytes.NewReader(imgData))
 	if err == nil {
 		img.decoded = decoded
 		img.valid = true
+		img.pngBytes = make([]byte, len(imgData))
+		copy(img.pngBytes, imgData)
 		img.imgData = nil
 	}
 
 	return img
 }
 
-// Draw renders the image as block art or falls back to alt text.
+// Draw renders the image using the best available method: Kitty graphics
+// protocol when a capable provider is present, otherwise half-block art.
+// Falls back to alt text if the image data is invalid.
 func (img *Image) Draw(p *core.Painter) {
 	if img.Rect.W == 0 || img.Rect.H == 0 {
 		return
@@ -66,6 +74,46 @@ func (img *Image) Draw(p *core.Painter) {
 		return
 	}
 
+	gp := p.GraphicsProvider()
+	if gp != nil && gp.Capability() >= core.GraphicsKitty {
+		img.drawKitty(p, gp)
+		return
+	}
+
+	img.drawHalfBlock(p)
+}
+
+// drawKitty renders the image via the Kitty graphics protocol.
+func (img *Image) drawKitty(p *core.Painter, gp core.GraphicsProvider) {
+	// Fill region with spaces so tcell clears the area
+	p.Fill(img.Rect, ' ', img.style)
+
+	// Delete old placement if position/size changed
+	if img.imageID != 0 && img.lastRect != img.Rect {
+		gp.DeleteImage(img.imageID)
+		img.imageID = 0
+	}
+
+	// Allocate ID on first use
+	if img.imageID == 0 {
+		if alloc, ok := gp.(interface{ AllocateID() uint32 }); ok {
+			img.imageID = alloc.AllocateID()
+		} else {
+			img.imageID = 1
+		}
+	}
+
+	gp.PlaceImage(core.ImagePlacement{
+		ID:      img.imageID,
+		Rect:    img.Rect,
+		ImgData: img.pngBytes,
+		ZIndex:  -1,
+	})
+	img.lastRect = img.Rect
+}
+
+// drawHalfBlock renders the image as Unicode half-block art.
+func (img *Image) drawHalfBlock(p *core.Painter) {
 	imgBounds := img.decoded.Bounds()
 	imgW := imgBounds.Dx()
 	imgH := imgBounds.Dy()
