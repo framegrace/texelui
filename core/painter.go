@@ -8,10 +8,23 @@ import (
 type Painter struct {
 	buf  [][]Cell
 	clip Rect
+	gp   GraphicsProvider
 }
 
 func NewPainter(buf [][]Cell, clip Rect) *Painter {
 	return &Painter{buf: buf, clip: clip}
+}
+
+// NewPainterWithGraphics creates a Painter with a GraphicsProvider.
+// Widgets can query the provider via GraphicsProvider() to decide their
+// rendering strategy (e.g., Kitty image protocol vs half-block art).
+func NewPainterWithGraphics(buf [][]Cell, clip Rect, gp GraphicsProvider) *Painter {
+	return &Painter{buf: buf, clip: clip, gp: gp}
+}
+
+// GraphicsProvider returns the graphics provider, or nil if none was set.
+func (p *Painter) GraphicsProvider() GraphicsProvider {
+	return p.gp
 }
 
 func (p *Painter) Size() (int, int) {
@@ -89,7 +102,7 @@ func (p *Painter) WithClip(rect Rect) *Painter {
 
 	// If no valid intersection, return painter with zero-size clip
 	if left >= right || top >= bottom {
-		return &Painter{buf: p.buf, clip: Rect{}}
+		return &Painter{buf: p.buf, clip: Rect{}, gp: p.gp}
 	}
 
 	return &Painter{
@@ -100,5 +113,6 @@ func (p *Painter) WithClip(rect Rect) *Painter {
 			W: right - left,
 			H: bottom - top,
 		},
+		gp: p.gp,
 	}
 }

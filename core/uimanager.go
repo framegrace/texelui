@@ -48,6 +48,9 @@ type UIManager struct {
 
 	// Root widget that auto-fills the content area (excluding status bar)
 	rootWidget Widget
+
+	// Graphics provider for image rendering (Kitty protocol, etc.)
+	graphicsProvider GraphicsProvider
 }
 
 func NewUIManager() *UIManager {
@@ -59,6 +62,20 @@ func NewUIManager() *UIManager {
 		AdvanceFocusOnEnter: true, // Enable by default for form-style data entry
 		statusBarHeight:     2,    // Default: 1 separator + 1 content row
 	}
+}
+
+// SetGraphicsProvider sets the graphics provider for image rendering.
+func (u *UIManager) SetGraphicsProvider(gp GraphicsProvider) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	u.graphicsProvider = gp
+}
+
+// GraphicsProvider returns the current graphics provider, or nil if none.
+func (u *UIManager) GraphicsProvider() GraphicsProvider {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return u.graphicsProvider
 }
 
 // SetStatusBar sets the status bar widget.
@@ -871,7 +888,7 @@ func (u *UIManager) Render() [][]Cell {
 	if len(dirtyCopy) == 0 {
 		// No specific dirty regions requested: compose full frame.
 		full := Rect{X: 0, Y: 0, W: u.W, H: u.H}
-		p := NewPainter(u.buf, full)
+		p := NewPainterWithGraphics(u.buf, full, u.graphicsProvider)
 		p.Fill(full, ' ', u.bgStyle)
 		for _, w := range sorted {
 			w.Draw(p)
@@ -905,7 +922,7 @@ func (u *UIManager) Render() [][]Cell {
 			continue
 		}
 
-		p := NewPainter(u.buf, clip)
+		p := NewPainterWithGraphics(u.buf, clip, u.graphicsProvider)
 		// Clear dirty region
 		p.Fill(clip, ' ', u.bgStyle)
 		// Draw widgets intersecting clip
