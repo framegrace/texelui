@@ -157,15 +157,10 @@ func runApp(app core.App, opts Options) error {
 		return fmt.Errorf("theme: %w", err)
 	}
 
-	// Detect graphics capability
+	// Detect graphics capability via environment variables
 	var graphicsProvider core.GraphicsProvider
-	if tty, ok := screen.Tty(); ok {
-		gcap := graphics.DetectCapability(tty)
-		if gcap == core.GraphicsKitty {
-			graphicsProvider = graphics.NewKittyProvider()
-		} else {
-			graphicsProvider = graphics.NewHalfBlockProvider()
-		}
+	if graphics.DetectCapability() == core.GraphicsKitty {
+		graphicsProvider = graphics.NewKittyProvider()
 	} else {
 		graphicsProvider = graphics.NewHalfBlockProvider()
 	}
