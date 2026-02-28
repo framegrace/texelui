@@ -547,6 +547,46 @@ func TestBoxWithFlexChild(t *testing.T) {
 	}
 }
 
+func TestVBoxMaxWidth(t *testing.T) {
+	vbox := NewVBox()
+	btn := NewButton("Hello") // natural width 9 (5 + 4 padding)
+	vbox.AddChild(btn)
+	vbox.MaxWidth = 30
+	vbox.Resize(80, 10)
+
+	w, _ := btn.Size()
+	if w != 30 {
+		t.Errorf("expected child width 30, got %d", w)
+	}
+}
+
+func TestVBoxMaxWidthNoEffectWhenSmaller(t *testing.T) {
+	vbox := NewVBox()
+	btn := NewButton("Hi")
+	vbox.AddChild(btn)
+	vbox.MaxWidth = 30
+	vbox.Resize(20, 10) // VBox width 20 < MaxWidth 30
+
+	w, _ := btn.Size()
+	if w != 20 {
+		t.Errorf("expected child width 20 (VBox width), got %d", w)
+	}
+}
+
+func TestVBoxMaxWidthNoEffectOnHBox(t *testing.T) {
+	hbox := NewHBox()
+	btn := NewButton("Hi")
+	hbox.AddChild(btn)
+	hbox.MaxWidth = 10
+	hbox.Resize(5, 80)
+
+	_, h := btn.Size()
+	// HBox cross-axis is height; MaxWidth should not affect it
+	if h != 80 {
+		t.Errorf("expected child height 80 (HBox height), got %d", h)
+	}
+}
+
 func TestBoxWithFixedSizeChild(t *testing.T) {
 	hbox := NewHBox()
 	hbox.Spacing = 0

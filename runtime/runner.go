@@ -12,6 +12,7 @@ import (
 
 	"github.com/framegrace/texelui/adapter"
 	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/graphics"
 	"github.com/framegrace/texelui/theme"
 	"github.com/gdamore/tcell/v2"
 )
@@ -156,6 +157,27 @@ func runApp(app core.App, opts Options) error {
 		return fmt.Errorf("theme: %w", err)
 	}
 
+	// Detect graphics capability via environment variables
+	var graphicsProvider core.GraphicsProvider
+	if graphics.DetectCapability() == core.GraphicsKitty {
+		graphicsProvider = graphics.NewKittyProvider()
+	} else {
+		graphicsProvider = graphics.NewHalfBlockProvider()
+	}
+
+	// Inject into UIManager if the app supports it
+	if ua, ok := app.(interface{ UI() *core.UIManager }); ok {
+		ua.UI().SetGraphicsProvider(graphicsProvider)
+	}
+	defer func() {
+		if kp, ok := graphicsProvider.(*graphics.KittyProvider); ok {
+			kp.Reset()
+			if tty, hasTty := screen.Tty(); hasTty {
+				_ = kp.Flush(tty)
+			}
+		}
+	}()
+
 	width, height := screen.Size()
 	app.Resize(width, height)
 	refreshCh := make(chan bool, 1)
@@ -163,6 +185,8 @@ func runApp(app core.App, opts Options) error {
 
 	draw := func() {
 		screen.Clear()
+		// Reset previous placements; visible ones will re-place during Render
+		graphicsProvider.Reset()
 		buffer := app.Render()
 		if buffer != nil {
 			for y := 0; y < len(buffer); y++ {
@@ -174,6 +198,12 @@ func runApp(app core.App, opts Options) error {
 			}
 		}
 		screen.Show()
+		// Flush queued Kitty image commands after tcell has flushed
+		if kp, ok := graphicsProvider.(*graphics.KittyProvider); ok {
+			if tty, hasTty := screen.Tty(); hasTty {
+				_ = kp.Flush(tty)
+			}
+		}
 	}
 
 	draw()
@@ -214,6 +244,7 @@ func runApp(app core.App, opts Options) error {
 			draw()
 		case *tcell.EventResize:
 			w, h := tev.Size()
+			graphicsProvider.Reset()
 			app.Resize(w, h)
 			draw()
 		case *tcell.EventPaste:

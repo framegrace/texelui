@@ -8,7 +8,11 @@
 package texeluidemo
 
 import (
+	"bytes"
 	"fmt"
+	"image"
+	"image/color"
+	"image/png"
 
 	"github.com/framegrace/texelui/adapter"
 	"github.com/framegrace/texelui/core"
@@ -38,7 +42,8 @@ func New() core.App {
 	tabPanel.AddTab("Layouts", createLayoutsTab())
 
 	// === Widgets Tab ===
-	tabPanel.AddTab("Widgets", createWidgetsTab(statusBar))
+	widgetsPane, imgLabel := createWidgetsTab(statusBar)
+	tabPanel.AddTab("Widgets", widgetsPane)
 
 	// === Scrolling Tab (dedicated scroll demo) ===
 	tabPanel.AddTab("Scrolling", createScrollingTab())
@@ -50,6 +55,13 @@ func New() core.App {
 		contentH := ui.ContentHeight()
 		tabPanel.SetPosition(0, 0)
 		tabPanel.Resize(w, contentH)
+
+		// Update image label to reflect actual rendering mode
+		if gp := ui.GraphicsProvider(); gp != nil && gp.Capability() >= core.GraphicsKitty {
+			imgLabel.Text = "Image (kitty):"
+		} else {
+			imgLabel.Text = "Image (block art):"
+		}
 	})
 	return app
 }
@@ -231,7 +243,8 @@ func createLayoutsTab() *widgets.Pane {
 }
 
 // createWidgetsTab creates the Widgets tab content with Label, Button, Checkbox.
-func createWidgetsTab(statusBar *widgets.StatusBar) *widgets.Pane {
+// Returns the pane and the image section label (for dynamic mode update).
+func createWidgetsTab(statusBar *widgets.StatusBar) (*widgets.Pane, *widgets.Label) {
 	pane := widgets.NewPane()
 
 	// Title
@@ -334,12 +347,97 @@ func createWidgetsTab(statusBar *widgets.StatusBar) *widgets.Pane {
 	}
 	pane.AddChild(check3)
 
+	// Links section
+	linkTitle := widgets.NewLabel("Links:")
+	linkTitle.SetPosition(2, 13)
+	pane.AddChild(linkTitle)
+
+	link1 := widgets.NewLink("TexelUI Documentation")
+	link1.SetPosition(2, 14)
+	link1.OnClick = func() {
+		statusLabel.Text = "Documentation link clicked!"
+		if statusBar != nil {
+			statusBar.ShowMessage("Opening TexelUI docs...")
+		}
+	}
+	pane.AddChild(link1)
+
+	link2 := widgets.NewLink("GitHub Repository")
+	link2.SetPosition(2, 15)
+	link2.OnClick = func() {
+		statusLabel.Text = "GitHub link clicked!"
+		if statusBar != nil {
+			statusBar.ShowMessage("Opening GitHub...")
+		}
+	}
+	pane.AddChild(link2)
+
+	// Image section (label updated at runtime to reflect rendering mode)
+	imageTitle := widgets.NewLabel("Image:")
+	imageTitle.SetPosition(30, 10)
+	pane.AddChild(imageTitle)
+
+	imgWidget := widgets.NewImage(generateDemoGradient(), "gradient")
+	imgWidget.SetPosition(30, 11)
+	imgWidget.Resize(24, 6)
+	pane.AddChild(imgWidget)
+
+	// Bordered section with focus delegation
+	borderedTitle := widgets.NewLabel("Border + Focus Cycling:")
+	borderedTitle.SetPosition(56, 3)
+	pane.AddChild(borderedTitle)
+
+	innerBox := widgets.NewVBox()
+	innerBox.Spacing = 0
+	innerLink := widgets.NewLink("Click me")
+	innerLink.OnClick = func() {
+		statusLabel.Text = "Bordered link clicked!"
+		if statusBar != nil {
+			statusBar.ShowSuccess("Link inside border activated!")
+		}
+	}
+	innerBox.AddChild(innerLink)
+	innerCheck := widgets.NewCheckbox("Bordered check")
+	innerCheck.OnChange = func(checked bool) {
+		statusLabel.Text = fmt.Sprintf("Bordered check: %v", checked)
+	}
+	innerBox.AddChild(innerCheck)
+	innerBtn := widgets.NewButton("Bordered Btn")
+	innerBtn.OnClick = func() {
+		statusLabel.Text = "Bordered button clicked!"
+	}
+	innerBox.AddChild(innerBtn)
+
+	border := widgets.NewBorder()
+	border.Title = "Focus Group"
+	border.SetPosition(56, 4)
+	border.Resize(24, 5)
+	border.SetChild(innerBox)
+	pane.AddChild(border)
+
 	// Help text
 	helpLabel := widgets.NewLabel("Key hints shown in status bar below")
-	helpLabel.SetPosition(2, 14)
+	helpLabel.SetPosition(2, 17)
 	pane.AddChild(helpLabel)
 
-	return pane
+	return pane, imageTitle
+}
+
+// generateDemoGradient creates a small PNG with a colorful gradient for the Image widget demo.
+func generateDemoGradient() []byte {
+	const w, h = 48, 24
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	for y := range h {
+		for x := range w {
+			r := uint8(x * 255 / w)
+			g := uint8(y * 255 / h)
+			b := uint8(128)
+			img.Set(x, y, color.RGBA{r, g, b, 255})
+		}
+	}
+	var buf bytes.Buffer
+	_ = png.Encode(&buf, img)
+	return buf.Bytes()
 }
 
 // createScrollingTab creates the Scrolling tab demonstrating the ScrollPane widget.

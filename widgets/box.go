@@ -33,9 +33,10 @@ type boxChild struct {
 // boxBase is the common implementation for VBox and HBox.
 type boxBase struct {
 	core.BaseWidget
-	Style   tcell.Style
-	Spacing int      // Space between children
-	Align   BoxAlign // Alignment of children
+	Style    tcell.Style
+	Spacing  int      // Space between children
+	Align    BoxAlign // Alignment of children
+	MaxWidth int      // When > 0, caps child width in VBox (cross-axis)
 
 	children       []boxChild
 	inv            func(core.Rect)
@@ -202,8 +203,12 @@ func (b *boxBase) layout() {
 		}
 
 		if b.vertical {
+			childW := b.Rect.W
+			if b.MaxWidth > 0 && childW > b.MaxWidth {
+				childW = b.MaxWidth
+			}
 			child.widget.SetPosition(b.Rect.X, pos)
-			child.widget.Resize(b.Rect.W, size)
+			child.widget.Resize(childW, size)
 			pos += size + b.Spacing
 		} else {
 			child.widget.SetPosition(pos, b.Rect.Y)

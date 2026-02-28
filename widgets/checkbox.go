@@ -1,13 +1,13 @@
 package widgets
 
 import (
-	"github.com/gdamore/tcell/v2"
-	"github.com/framegrace/texelui/theme"
 	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/theme"
+	"github.com/gdamore/tcell/v2"
 )
 
 // Checkbox is a toggleable widget that displays a checked or unchecked state.
-// Format: [X] Label or [ ] Label
+// Format: [x] Label or [ ] Label
 type Checkbox struct {
 	core.BaseWidget
 	Label    string
@@ -39,7 +39,7 @@ func NewCheckbox(label string) *Checkbox {
 
 	c.SetPosition(0, 0)
 
-	// Width: "[X] " + label = 4 + len(label)
+	// Width: "[x] " + label = 4 + len(label)
 	w := 4 + len(label)
 	c.Resize(w, 1)
 
@@ -59,7 +59,7 @@ func (c *Checkbox) Draw(painter *core.Painter) {
 	// Determine checkbox character
 	var checkChar string
 	if c.Checked {
-		checkChar = "[X] "
+		checkChar = "[x] "
 	} else {
 		checkChar = "[ ] "
 	}
