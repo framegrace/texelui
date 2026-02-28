@@ -171,7 +171,7 @@ func runApp(app core.App, opts Options) error {
 	}
 	defer func() {
 		if kp, ok := graphicsProvider.(*graphics.KittyProvider); ok {
-			kp.DeleteAll()
+			kp.Reset()
 			if tty, hasTty := screen.Tty(); hasTty {
 				_ = kp.Flush(tty)
 			}
@@ -185,8 +185,8 @@ func runApp(app core.App, opts Options) error {
 
 	draw := func() {
 		screen.Clear()
-		// Delete previous Kitty images; visible ones will re-place during Render
-		graphicsProvider.DeleteAll()
+		// Reset previous placements; visible ones will re-place during Render
+		graphicsProvider.Reset()
 		buffer := app.Render()
 		if buffer != nil {
 			for y := 0; y < len(buffer); y++ {
@@ -244,7 +244,7 @@ func runApp(app core.App, opts Options) error {
 			draw()
 		case *tcell.EventResize:
 			w, h := tev.Size()
-			graphicsProvider.DeleteAll()
+			graphicsProvider.Reset()
 			app.Resize(w, h)
 			draw()
 		case *tcell.EventPaste:

@@ -6,17 +6,17 @@ import (
 	"github.com/framegrace/texelui/core"
 )
 
-func TestHalfBlockProvider(t *testing.T) {
+func TestHalfBlockCapability(t *testing.T) {
 	p := NewHalfBlockProvider()
 	if p.Capability() != core.GraphicsHalfBlock {
 		t.Errorf("expected HalfBlock, got %d", p.Capability())
 	}
-	// PlaceImage is a no-op, should not error
-	err := p.PlaceImage(core.ImagePlacement{ID: 1})
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+}
+
+func TestHalfBlockCreateSurfaceStub(t *testing.T) {
+	p := NewHalfBlockProvider()
+	s := p.CreateSurface(10, 10)
+	if s == nil {
+		t.Fatal("CreateSurface returned nil")
 	}
-	// Delete methods are no-ops, should not panic
-	p.DeleteImage(1)
-	p.DeleteAll()
 }

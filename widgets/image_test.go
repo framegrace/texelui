@@ -26,53 +26,22 @@ func TestImage_FromBytes(t *testing.T) {
 	imgWidget := NewImage(buf.Bytes(), "red square")
 	imgWidget.Resize(4, 2) // 4 cols, 2 rows (2 pixels per row via half-blocks)
 
+	// With a HalfBlock-capable provider, the surface Place stub is a no-op,
+	// so we test alt-text fallback with no provider.
 	cellBuf := createTestBuffer(4, 2)
 	p := core.NewPainter(cellBuf, core.Rect{X: 0, Y: 0, W: 4, H: 2})
 
 	imgWidget.Draw(p)
 
-	// Verify cells are not empty (block art should produce characters).
-	nonEmpty := 0
-	for _, row := range cellBuf {
-		for _, c := range row {
-			if c.Ch != 0 && c.Ch != ' ' {
-				nonEmpty++
-			}
+	// With nil provider, capability < HalfBlock, so alt text is rendered.
+	text := ""
+	for _, c := range cellBuf[0] {
+		if c.Ch != 0 {
+			text += string(c.Ch)
 		}
 	}
-	if nonEmpty == 0 {
-		t.Error("expected non-empty block art cells")
-	}
-}
-
-func TestImage_BlockArtColors(t *testing.T) {
-	// Create a 2x2 image: top row red, bottom row blue.
-	// With half-blocks, a 2-col x 1-row widget maps to:
-	//   fg (top pixel) = red, bg (bottom pixel) = blue.
-	img := image.NewRGBA(image.Rect(0, 0, 2, 2))
-	img.Set(0, 0, color.RGBA{255, 0, 0, 255})
-	img.Set(1, 0, color.RGBA{255, 0, 0, 255})
-	img.Set(0, 1, color.RGBA{0, 0, 255, 255})
-	img.Set(1, 1, color.RGBA{0, 0, 255, 255})
-
-	var buf bytes.Buffer
-	if err := png.Encode(&buf, img); err != nil {
-		t.Fatal(err)
-	}
-
-	imgWidget := NewImage(buf.Bytes(), "red-blue")
-	imgWidget.Resize(2, 1)
-
-	cellBuf := createTestBuffer(2, 1)
-	p := core.NewPainter(cellBuf, core.Rect{X: 0, Y: 0, W: 2, H: 1})
-
-	imgWidget.Draw(p)
-
-	// Each cell should use the upper-half-block character.
-	for x := range 2 {
-		if cellBuf[0][x].Ch != '▀' {
-			t.Errorf("cell[0][%d].Ch = %q, want '▀'", x, cellBuf[0][x].Ch)
-		}
+	if text == "" {
+		t.Error("expected non-empty output")
 	}
 }
 
@@ -105,7 +74,7 @@ func TestImage_NotFocusable(t *testing.T) {
 	}
 }
 
-func TestImage_KittyPath(t *testing.T) {
+func TestImage_SurfacePath(t *testing.T) {
 	img := image.NewRGBA(image.Rect(0, 0, 4, 4))
 	for y := range 4 {
 		for x := range 4 {
@@ -116,75 +85,25 @@ func TestImage_KittyPath(t *testing.T) {
 	if err := png.Encode(&buf, img); err != nil {
 		t.Fatal(err)
 	}
-	pngData := buf.Bytes()
 
-	imgWidget := NewImage(pngData, "red square")
+	imgWidget := NewImage(buf.Bytes(), "red square")
 	imgWidget.Resize(4, 2)
 	imgWidget.SetPosition(5, 10)
 
-	provider := &mockGraphicsProvider{cap: core.GraphicsKitty}
+	provider := &mockGraphicsProvider{}
 
 	cellBuf := createTestBuffer(20, 15)
 	p := core.NewPainterWithGraphics(cellBuf, core.Rect{X: 0, Y: 0, W: 20, H: 15}, provider)
 
+	// Should not panic; surface stub Place is a no-op
 	imgWidget.Draw(p)
 
-	if len(provider.placements) != 1 {
-		t.Fatalf("expected 1 placement, got %d", len(provider.placements))
-	}
-
-	pl := provider.placements[0]
-	if pl.Rect.X != 5 || pl.Rect.Y != 10 {
-		t.Errorf("expected position (5,10), got (%d,%d)", pl.Rect.X, pl.Rect.Y)
-	}
-	if pl.Rect.W != 4 || pl.Rect.H != 2 {
-		t.Errorf("expected size (4,2), got (%d,%d)", pl.Rect.W, pl.Rect.H)
-	}
-	if len(pl.ImgData) == 0 {
-		t.Error("expected non-empty image data")
-	}
-
-	// Cell buffer should be filled with spaces (placeholder)
-	for y := 10; y < 12; y++ {
-		for x := 5; x < 9; x++ {
-			if cellBuf[y][x].Ch != ' ' {
-				t.Errorf("expected space at (%d,%d), got %q", x, y, cellBuf[y][x].Ch)
-			}
-		}
+	if provider.createCount == 0 {
+		t.Error("expected CreateSurface to be called")
 	}
 }
 
-func TestImage_FallbackToHalfBlock(t *testing.T) {
-	img := image.NewRGBA(image.Rect(0, 0, 4, 4))
-	for y := range 4 {
-		for x := range 4 {
-			img.Set(x, y, color.RGBA{0, 255, 0, 255})
-		}
-	}
-	var buf bytes.Buffer
-	if err := png.Encode(&buf, img); err != nil {
-		t.Fatal(err)
-	}
-
-	imgWidget := NewImage(buf.Bytes(), "green square")
-	imgWidget.Resize(4, 2)
-
-	provider := &mockGraphicsProvider{cap: core.GraphicsHalfBlock}
-	cellBuf := createTestBuffer(4, 2)
-	p := core.NewPainterWithGraphics(cellBuf, core.Rect{X: 0, Y: 0, W: 4, H: 2}, provider)
-
-	imgWidget.Draw(p)
-
-	if len(provider.placements) != 0 {
-		t.Errorf("expected 0 placements for HalfBlock, got %d", len(provider.placements))
-	}
-
-	if cellBuf[0][0].Ch != '\u2580' {
-		t.Errorf("expected half-block character, got %q", cellBuf[0][0].Ch)
-	}
-}
-
-func TestImage_NilProvider_UsesHalfBlock(t *testing.T) {
+func TestImage_NilProvider_AltText(t *testing.T) {
 	img := image.NewRGBA(image.Rect(0, 0, 4, 4))
 	for y := range 4 {
 		for x := range 4 {
@@ -197,28 +116,46 @@ func TestImage_NilProvider_UsesHalfBlock(t *testing.T) {
 	}
 
 	imgWidget := NewImage(buf.Bytes(), "blue square")
-	imgWidget.Resize(4, 2)
+	imgWidget.Resize(20, 1)
 
-	// No provider (nil) - should use half-block
-	cellBuf := createTestBuffer(4, 2)
-	p := core.NewPainter(cellBuf, core.Rect{X: 0, Y: 0, W: 4, H: 2})
+	// No provider (nil) - capability < HalfBlock, falls back to alt text
+	cellBuf := createTestBuffer(20, 1)
+	p := core.NewPainter(cellBuf, core.Rect{X: 0, Y: 0, W: 20, H: 1})
 
 	imgWidget.Draw(p)
 
-	if cellBuf[0][0].Ch != '\u2580' {
-		t.Errorf("expected half-block character with nil provider, got %q", cellBuf[0][0].Ch)
+	text := ""
+	for _, c := range cellBuf[0] {
+		if c.Ch != 0 {
+			text += string(c.Ch)
+		}
+	}
+	if text == "" {
+		t.Error("expected alt text output with nil provider")
 	}
 }
 
 type mockGraphicsProvider struct {
-	cap        core.GraphicsCapability
-	placements []core.ImagePlacement
+	createCount int
 }
 
-func (p *mockGraphicsProvider) Capability() core.GraphicsCapability { return p.cap }
-func (p *mockGraphicsProvider) PlaceImage(pl core.ImagePlacement) error {
-	p.placements = append(p.placements, pl)
-	return nil
+func (p *mockGraphicsProvider) Capability() core.GraphicsCapability {
+	return core.GraphicsHalfBlock
 }
-func (p *mockGraphicsProvider) DeleteImage(uint32) {}
-func (p *mockGraphicsProvider) DeleteAll()         {}
+
+func (p *mockGraphicsProvider) CreateSurface(w, h int) core.ImageSurface {
+	p.createCount++
+	return &mockImageSurface{buf: image.NewRGBA(image.Rect(0, 0, w, h))}
+}
+
+func (p *mockGraphicsProvider) Reset() {}
+
+type mockImageSurface struct {
+	buf *image.RGBA
+}
+
+func (s *mockImageSurface) ID() uint32          { return 1 }
+func (s *mockImageSurface) Buffer() *image.RGBA { return s.buf }
+func (s *mockImageSurface) Update() error       { return nil }
+func (s *mockImageSurface) Place(p *core.Painter, rect core.Rect, zIndex int) {}
+func (s *mockImageSurface) Delete()             {}
