@@ -42,7 +42,8 @@ func New() core.App {
 	tabPanel.AddTab("Layouts", createLayoutsTab())
 
 	// === Widgets Tab ===
-	tabPanel.AddTab("Widgets", createWidgetsTab(statusBar))
+	widgetsPane, imgLabel := createWidgetsTab(statusBar)
+	tabPanel.AddTab("Widgets", widgetsPane)
 
 	// === Scrolling Tab (dedicated scroll demo) ===
 	tabPanel.AddTab("Scrolling", createScrollingTab())
@@ -54,6 +55,13 @@ func New() core.App {
 		contentH := ui.ContentHeight()
 		tabPanel.SetPosition(0, 0)
 		tabPanel.Resize(w, contentH)
+
+		// Update image label to reflect actual rendering mode
+		if gp := ui.GraphicsProvider(); gp != nil && gp.Capability() >= core.GraphicsKitty {
+			imgLabel.Text = "Image (kitty):"
+		} else {
+			imgLabel.Text = "Image (block art):"
+		}
 	})
 	return app
 }
@@ -235,7 +243,8 @@ func createLayoutsTab() *widgets.Pane {
 }
 
 // createWidgetsTab creates the Widgets tab content with Label, Button, Checkbox.
-func createWidgetsTab(statusBar *widgets.StatusBar) *widgets.Pane {
+// Returns the pane and the image section label (for dynamic mode update).
+func createWidgetsTab(statusBar *widgets.StatusBar) (*widgets.Pane, *widgets.Label) {
 	pane := widgets.NewPane()
 
 	// Title
@@ -363,8 +372,8 @@ func createWidgetsTab(statusBar *widgets.StatusBar) *widgets.Pane {
 	}
 	pane.AddChild(link2)
 
-	// Image section (block art rendering)
-	imageTitle := widgets.NewLabel("Image (block art):")
+	// Image section (label updated at runtime to reflect rendering mode)
+	imageTitle := widgets.NewLabel("Image:")
 	imageTitle.SetPosition(30, 10)
 	pane.AddChild(imageTitle)
 
@@ -411,7 +420,7 @@ func createWidgetsTab(statusBar *widgets.StatusBar) *widgets.Pane {
 	helpLabel.SetPosition(2, 17)
 	pane.AddChild(helpLabel)
 
-	return pane
+	return pane, imageTitle
 }
 
 // generateDemoGradient creates a small PNG with a colorful gradient for the Image widget demo.

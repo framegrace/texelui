@@ -185,6 +185,8 @@ func runApp(app core.App, opts Options) error {
 
 	draw := func() {
 		screen.Clear()
+		// Delete previous Kitty images; visible ones will re-place during Render
+		graphicsProvider.DeleteAll()
 		buffer := app.Render()
 		if buffer != nil {
 			for y := 0; y < len(buffer); y++ {
