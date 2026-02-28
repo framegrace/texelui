@@ -12,6 +12,7 @@ import (
 
 	"github.com/framegrace/texelui/adapter"
 	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/graphics"
 	"github.com/framegrace/texelui/theme"
 	"github.com/gdamore/tcell/v2"
 )
@@ -156,6 +157,29 @@ func runApp(app core.App, opts Options) error {
 		return fmt.Errorf("theme: %w", err)
 	}
 
+	// Detect graphics capability
+	var graphicsProvider core.GraphicsProvider
+	if tty, ok := screen.Tty(); ok {
+		gcap := graphics.DetectCapability(tty)
+		if gcap == core.GraphicsKitty {
+			graphicsProvider = graphics.NewKittyProvider()
+		} else {
+			graphicsProvider = graphics.NewHalfBlockProvider()
+		}
+	} else {
+		graphicsProvider = graphics.NewHalfBlockProvider()
+	}
+
+	// Inject into UIManager if the app supports it
+	if ua, ok := app.(interface{ UI() *core.UIManager }); ok {
+		ua.UI().SetGraphicsProvider(graphicsProvider)
+	}
+	defer func() {
+		if graphicsProvider != nil {
+			graphicsProvider.DeleteAll()
+		}
+	}()
+
 	width, height := screen.Size()
 	app.Resize(width, height)
 	refreshCh := make(chan bool, 1)
@@ -174,6 +198,12 @@ func runApp(app core.App, opts Options) error {
 			}
 		}
 		screen.Show()
+		// Flush queued Kitty image commands after tcell has flushed
+		if kp, ok := graphicsProvider.(*graphics.KittyProvider); ok {
+			if tty, hasTty := screen.Tty(); hasTty {
+				_ = kp.Flush(tty)
+			}
+		}
 	}
 
 	draw()
@@ -214,6 +244,7 @@ func runApp(app core.App, opts Options) error {
 			draw()
 		case *tcell.EventResize:
 			w, h := tev.Size()
+			graphicsProvider.DeleteAll()
 			app.Resize(w, h)
 			draw()
 		case *tcell.EventPaste:
