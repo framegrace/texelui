@@ -175,8 +175,11 @@ func runApp(app core.App, opts Options) error {
 		ua.UI().SetGraphicsProvider(graphicsProvider)
 	}
 	defer func() {
-		if graphicsProvider != nil {
-			graphicsProvider.DeleteAll()
+		if kp, ok := graphicsProvider.(*graphics.KittyProvider); ok {
+			kp.DeleteAll()
+			if tty, hasTty := screen.Tty(); hasTty {
+				_ = kp.Flush(tty)
+			}
 		}
 	}()
 

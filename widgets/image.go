@@ -21,7 +21,7 @@ import (
 type Image struct {
 	core.BaseWidget
 	imgData  []byte
-	pngBytes []byte // raw PNG bytes retained for Kitty (f=100)
+	rawImgBytes []byte // raw image bytes (PNG/JPEG/GIF) for Kitty protocol
 	altText  string
 	decoded  image.Image
 	valid    bool
@@ -54,8 +54,8 @@ func NewImage(imgData []byte, altText string) *Image {
 	if err == nil {
 		img.decoded = decoded
 		img.valid = true
-		img.pngBytes = make([]byte, len(imgData))
-		copy(img.pngBytes, imgData)
+		img.rawImgBytes = make([]byte, len(imgData))
+		copy(img.rawImgBytes, imgData)
 		img.imgData = nil
 	}
 
@@ -106,7 +106,7 @@ func (img *Image) drawKitty(p *core.Painter, gp core.GraphicsProvider) {
 	gp.PlaceImage(core.ImagePlacement{
 		ID:      img.imageID,
 		Rect:    img.Rect,
-		ImgData: img.pngBytes,
+		ImgData: img.rawImgBytes,
 		ZIndex:  -1,
 	})
 	img.lastRect = img.Rect

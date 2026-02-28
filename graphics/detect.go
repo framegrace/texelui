@@ -31,7 +31,10 @@ func detectFromReadWriter(r io.Reader, w io.Writer) core.GraphicsCapability {
 		return core.GraphicsHalfBlock
 	}
 
-	// Read response with timeout via goroutine
+	// Read response with timeout via goroutine.
+	// Note: on timeout, this goroutine may remain blocked on Read until
+	// the next TTY input arrives or the program exits. This is acceptable
+	// because DetectCapability is called once at startup.
 	responseCh := make(chan []byte, 1)
 	go func() {
 		buf := make([]byte, 256)
