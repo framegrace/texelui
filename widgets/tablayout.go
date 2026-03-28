@@ -269,6 +269,23 @@ func (tl *TabLayout) HandleKey(ev *tcell.EventKey) bool {
 		return tl.CycleFocus(forward)
 	}
 
+	// Down arrow on tab bar → move into content (same as Tab)
+	if ev.Key() == tcell.KeyDown && tl.focusArea == 0 {
+		return tl.CycleFocus(true)
+	}
+
+	// Up arrow in content → move back to tab bar (same as Shift-Tab)
+	// Let content try first — if it doesn't handle it, cycle up.
+	if ev.Key() == tcell.KeyUp && tl.focusArea == 1 {
+		activeChild := tl.activeChild()
+		if activeChild != nil {
+			if activeChild.HandleKey(ev) {
+				return true
+			}
+		}
+		return tl.CycleFocus(false)
+	}
+
 	// Route other keys based on focus area
 	if tl.focusArea == 0 {
 		return tl.tabBar.HandleKey(ev)
