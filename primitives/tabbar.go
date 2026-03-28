@@ -7,9 +7,9 @@
 package primitives
 
 import (
-	"github.com/gdamore/tcell/v2"
-	"github.com/framegrace/texelui/theme"
 	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/theme"
+	"github.com/gdamore/tcell/v2"
 )
 
 // Powerline separator characters (Nerd Font Private Use Area).

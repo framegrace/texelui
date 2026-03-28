@@ -3,8 +3,8 @@ package primitives
 import (
 	"testing"
 
-	"github.com/gdamore/tcell/v2"
 	"github.com/framegrace/texelui/core"
+	"github.com/gdamore/tcell/v2"
 )
 
 func TestTabBar_NewTabBar(t *testing.T) {
@@ -369,13 +369,13 @@ func TestTabBar_TabAtX_Powerline(t *testing.T) {
 		x    int
 		want int
 	}{
-		{0, -1},  // left triangle
-		{1, 0},   // " AB " start
-		{2, 0},   // "A"
-		{3, 0},   // "B"
-		{4, 0},   // " AB " trailing space
-		{5, -1},  // separator
-		{6, 1},   // " CD " start
+		{0, -1}, // left triangle
+		{1, 0},  // " AB " start
+		{2, 0},  // "A"
+		{3, 0},  // "B"
+		{4, 0},  // " AB " trailing space
+		{5, -1}, // separator
+		{6, 1},  // " CD " start
 		{7, 1},
 		{8, 1},
 		{9, 1},   // " CD " trailing space
