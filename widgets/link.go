@@ -102,7 +102,8 @@ func (l *Link) SetInvalidator(fn func(core.Rect)) { l.inv = fn }
 // GetKeyHints implements core.KeyHintsProvider.
 func (l *Link) GetKeyHints() []core.KeyHint {
 	return []core.KeyHint{
-		{Key: "Enter", Label: "Follow link"},
+		{Key: "Enter", Label: "Follow"},
+		{Key: "↑↓", Label: "Navigate"},
 	}
 }
 

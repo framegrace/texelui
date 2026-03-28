@@ -110,6 +110,7 @@ func (c *Checkbox) SetInvalidator(fn func(core.Rect)) { c.inv = fn }
 func (c *Checkbox) GetKeyHints() []core.KeyHint {
 	return []core.KeyHint{
 		{Key: "Space", Label: "Toggle"},
+		{Key: "↑↓", Label: "Navigate"},
 	}
 }
 

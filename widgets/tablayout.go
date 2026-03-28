@@ -45,6 +45,11 @@ func NewTabLayout(tabs []primitives.TabItem) *TabLayout {
 		tl.invalidate()
 	}
 
+	// Wire up Up/Down focus cycling from tab bar
+	tl.tabBar.OnFocusExit = func(forward bool) {
+		tl.CycleFocus(forward)
+	}
+
 	return tl
 }
 
@@ -267,23 +272,6 @@ func (tl *TabLayout) HandleKey(ev *tcell.EventKey) bool {
 
 		// Content didn't handle it (or we're on tab bar) - cycle focus
 		return tl.CycleFocus(forward)
-	}
-
-	// Down arrow on tab bar → move into content (same as Tab)
-	if ev.Key() == tcell.KeyDown && tl.focusArea == 0 {
-		return tl.CycleFocus(true)
-	}
-
-	// Up arrow in content → move back to tab bar (same as Shift-Tab)
-	// Let content try first — if it doesn't handle it, cycle up.
-	if ev.Key() == tcell.KeyUp && tl.focusArea == 1 {
-		activeChild := tl.activeChild()
-		if activeChild != nil {
-			if activeChild.HandleKey(ev) {
-				return true
-			}
-		}
-		return tl.CycleFocus(false)
 	}
 
 	// Route other keys based on focus area
@@ -532,21 +520,17 @@ func (tl *TabLayout) GetKeyHints() []core.KeyHint {
 		return []core.KeyHint{
 			{Key: "←→", Label: "Switch"},
 			{Key: "1-9", Label: "Jump"},
-			{Key: "Tab", Label: "Content"},
-			{Key: "S-Tab", Label: "Exit"},
+			{Key: "↓", Label: "Content"},
 		}
 	}
 	// Content focused - delegate to content widget if it provides hints
 	activeChild := tl.activeChild()
 	if activeChild != nil {
 		if khp, ok := activeChild.(core.KeyHintsProvider); ok {
-			// Get content hints and add S-Tab for returning to tab bar
-			hints := khp.GetKeyHints()
-			hints = append(hints, core.KeyHint{Key: "S-Tab", Label: "Tab Bar"})
-			return hints
+			return khp.GetKeyHints()
 		}
 	}
 	return []core.KeyHint{
-		{Key: "S-Tab", Label: "Tab Bar"},
+		{Key: "↑↓", Label: "Navigate"},
 	}
 }

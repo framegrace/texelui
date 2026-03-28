@@ -51,6 +51,10 @@ type TabBar struct {
 	Style           TabBarStyle
 	ShowFocusMarker bool // Show '►' marker when focused (default true)
 
+	// Focus navigation callback — called when Up/Down should cycle focus
+	// out of the tab bar. Set by TabLayout to wire into CycleFocus.
+	OnFocusExit func(forward bool)
+
 	// Mouse hover state
 	hoverIdx int // Index of tab under mouse cursor (-1 if none)
 
@@ -385,5 +389,6 @@ func (tb *TabBar) GetKeyHints() []core.KeyHint {
 	return []core.KeyHint{
 		{Key: "←→", Label: "Switch"},
 		{Key: "1-9", Label: "Jump"},
+		{Key: "↓", Label: "Content"},
 	}
 }
