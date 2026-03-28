@@ -1,9 +1,10 @@
 package widgets
 
 import (
+	"github.com/gdamore/tcell/v2"
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/theme"
-	"github.com/gdamore/tcell/v2"
 )
 
 // Link is a clickable text widget styled with underline.
@@ -12,7 +13,7 @@ import (
 type Link struct {
 	core.BaseWidget
 	Text    string
-	Style   tcell.Style
+	Style   color.DynamicStyle
 	OnClick func()
 
 	// Invalidation callback
@@ -31,7 +32,11 @@ func NewLink(text string) *Link {
 	tm := theme.Get()
 	fg := tm.GetSemanticColor("accent.primary")
 	bg := tm.GetSemanticColor("bg.surface")
-	l.Style = tcell.StyleDefault.Foreground(fg).Background(bg).Underline(true)
+	l.Style = color.DynamicStyle{
+		FG:    color.Solid(fg),
+		BG:    color.Solid(bg),
+		Attrs: tcell.AttrUnderline,
+	}
 
 	// Configure focused style — reverse colors but keep underline
 	focusFg := tm.GetSemanticColor("text.inverse")
@@ -49,13 +54,15 @@ func NewLink(text string) *Link {
 
 // Draw renders the link text with underline style.
 func (l *Link) Draw(painter *core.Painter) {
-	style := l.EffectiveStyle(l.Style)
-
-	// Ensure underline is always applied, even after EffectiveStyle merges attributes
-	style = style.Underline(true)
+	ds := l.Style
+	// Ensure underline is always applied
+	ds.Attrs |= tcell.AttrUnderline
+	if l.IsFocused() {
+		ds.Attrs |= tcell.AttrReverse
+	}
 
 	// Fill background
-	painter.Fill(core.Rect{X: l.Rect.X, Y: l.Rect.Y, W: l.Rect.W, H: l.Rect.H}, ' ', style)
+	painter.FillDynamic(core.Rect{X: l.Rect.X, Y: l.Rect.Y, W: l.Rect.W, H: l.Rect.H}, ' ', ds)
 
 	if l.Text == "" {
 		return
@@ -68,7 +75,7 @@ func (l *Link) Draw(painter *core.Painter) {
 	}
 
 	// Draw text at position
-	painter.DrawText(l.Rect.X, l.Rect.Y+l.Rect.H/2, displayText, style)
+	painter.DrawDynamicText(l.Rect.X, l.Rect.Y+l.Rect.H/2, displayText, ds)
 }
 
 // HandleKey processes keyboard input. Enter triggers the OnClick callback.

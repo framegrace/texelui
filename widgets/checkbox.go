@@ -1,9 +1,10 @@
 package widgets
 
 import (
+	"github.com/gdamore/tcell/v2"
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/theme"
-	"github.com/gdamore/tcell/v2"
 )
 
 // Checkbox is a toggleable widget that displays a checked or unchecked state.
@@ -12,7 +13,7 @@ type Checkbox struct {
 	core.BaseWidget
 	Label    string
 	Checked  bool
-	Style    tcell.Style
+	Style    color.DynamicStyle
 	OnChange func(checked bool)
 
 	// Invalidation callback
@@ -32,7 +33,10 @@ func NewCheckbox(label string) *Checkbox {
 	tm := theme.Get()
 	fg := tm.GetSemanticColor("text.primary")
 	bg := tm.GetSemanticColor("bg.surface")
-	c.Style = tcell.StyleDefault.Foreground(fg).Background(bg)
+	c.Style = color.DynamicStyle{
+		FG: color.Solid(fg),
+		BG: color.Solid(bg),
+	}
 
 	// Configure focused style - reverse colors for clear visibility
 	c.SetFocusedStyle(tcell.StyleDefault.Foreground(bg).Background(fg), true)
@@ -51,10 +55,13 @@ func NewCheckbox(label string) *Checkbox {
 
 // Draw renders the checkbox with its current state.
 func (c *Checkbox) Draw(painter *core.Painter) {
-	style := c.EffectiveStyle(c.Style)
+	ds := c.Style
+	if c.IsFocused() {
+		ds.Attrs |= tcell.AttrReverse
+	}
 
 	// Fill background
-	painter.Fill(core.Rect{X: c.Rect.X, Y: c.Rect.Y, W: c.Rect.W, H: 1}, ' ', style)
+	painter.FillDynamic(core.Rect{X: c.Rect.X, Y: c.Rect.Y, W: c.Rect.W, H: 1}, ' ', ds)
 
 	// Determine checkbox character
 	var checkChar string
@@ -66,7 +73,7 @@ func (c *Checkbox) Draw(painter *core.Painter) {
 
 	// Draw checkbox indicator and label
 	displayText := checkChar + c.Label
-	painter.DrawText(c.Rect.X, c.Rect.Y, displayText, style)
+	painter.DrawDynamicText(c.Rect.X, c.Rect.Y, displayText, ds)
 }
 
 // HandleKey processes keyboard input. Space toggles the checkbox.
