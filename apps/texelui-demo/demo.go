@@ -20,6 +20,7 @@ import (
 	dyncolor "github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/scroll"
+	"github.com/framegrace/texelui/theme"
 	"github.com/framegrace/texelui/widgets"
 	"github.com/gdamore/tcell/v2"
 )
@@ -526,9 +527,34 @@ func (g *GradientBox) Draw(p *core.Painter) {
 	}
 }
 
+// GradientPane is a Pane with a dynamic color background.
+type GradientPane struct {
+	*widgets.Pane
+	BGStyle dyncolor.DynamicStyle
+}
+
+func (gp *GradientPane) Draw(p *core.Painter) {
+	// Draw gradient background
+	p.SetWidgetRect(gp.Rect)
+	p.FillDynamic(gp.Rect, ' ', gp.BGStyle)
+	// Draw children on top (labels, boxes, etc.)
+	gp.Pane.DrawChildren(p)
+}
+
 // createGradientsTab creates the Gradients tab demonstrating the dynamic color pipeline.
 func createGradientsTab() core.Widget {
-	pane := widgets.NewPane()
+	// Pane background: vertical gradient from theme bg.surface → black
+	tm := theme.Get()
+	surfaceBG := tm.GetSemanticColor("bg.surface")
+	pane := &GradientPane{
+		Pane: widgets.NewPane(),
+		BGStyle: dyncolor.DynamicStyle{
+			BG: dyncolor.Linear(90,
+				dyncolor.Stop(0, surfaceBG),
+				dyncolor.Stop(1, tcell.NewRGBColor(0, 0, 0)),
+			).WithLocal().Build(),
+		},
+	}
 
 	// Title
 	title := widgets.NewLabel("Dynamic Colors Demo")
@@ -661,10 +687,57 @@ func createGradientsTab() core.Widget {
 	plasma.Resize(30, 5)
 	pane.AddChild(plasma)
 
+	// 9. Animated FG: rainbow text with hue rotation
+	rainbowText := &TextGradientBox{
+		Text: "The quick brown fox jumps over the lazy dog - OKLCH rainbow text!",
+		FG: dyncolor.AnimatedFunc(func(ctx dyncolor.ColorContext) tcell.Color {
+			t := float64(time.Since(startTime).Milliseconds()) / 3000.0
+			nx := float64(ctx.X) / math.Max(float64(ctx.W-1), 1)
+			hue := math.Mod((nx*0.8+t)*360, 360)
+			return dyncolor.OKLCHToTcell(0.75, 0.18, hue)
+		}),
+	}
+	rainbowText.SetPosition(2, 27)
+	rainbowText.Resize(66, 1)
+	pane.AddChild(rainbowText)
+
+	// 10. Animated FG: pulsing accent text
+	pulseText := &TextGradientBox{
+		Text: ">>> Breathing text effect <<<",
+		FG: dyncolor.AnimatedFunc(func(ctx dyncolor.ColorContext) tcell.Color {
+			t := float64(time.Since(startTime).Milliseconds()) / 1500.0
+			lightness := 0.5 + 0.35*math.Sin(t*2*math.Pi)
+			return dyncolor.OKLCHToTcell(lightness, 0.2, 300) // magenta pulse
+		}),
+	}
+	pulseText.SetPosition(2, 29)
+	pulseText.Resize(40, 1)
+	pane.AddChild(pulseText)
+
 	// Help text
 	help := widgets.NewLabel("Gradients in OKLCH | Animated demos use time.Now() directly")
-	help.SetPosition(2, 27)
+	help.SetPosition(2, 31)
 	pane.AddChild(help)
 
 	return pane
+}
+
+// TextGradientBox renders text with a dynamic FG color on the default background.
+type TextGradientBox struct {
+	core.BaseWidget
+	Text string
+	FG   dyncolor.DynamicColor
+}
+
+func (g *TextGradientBox) Draw(p *core.Painter) {
+	p.SetWidgetRect(g.Rect)
+	ds := dyncolor.DynamicStyle{FG: g.FG}
+	x := g.Rect.X
+	for i, ch := range g.Text {
+		if i >= g.Rect.W {
+			break
+		}
+		p.SetDynamicCell(x, g.Rect.Y, ch, ds)
+		x++
+	}
 }
