@@ -3,8 +3,9 @@ package widgets
 import (
 	"testing"
 
-	"github.com/framegrace/texelui/core"
 	"github.com/gdamore/tcell/v2"
+	"github.com/framegrace/texelui/color"
+	"github.com/framegrace/texelui/core"
 )
 
 func TestBorder_BasicDraw(t *testing.T) {
@@ -124,17 +125,18 @@ func TestBorder_DetermineStyle_Resizing(t *testing.T) {
 	b.SetPosition(0, 0)
 	b.Resize(10, 5)
 
-	// Set custom styles for easy identification
-	normalStyle := tcell.StyleDefault.Foreground(tcell.ColorWhite)
-	focusedStyle := tcell.StyleDefault.Foreground(tcell.ColorGreen)
-	resizingStyle := tcell.StyleDefault.Foreground(tcell.ColorRed)
-	b.Style = normalStyle
-	b.FocusedStyle = focusedStyle
-	b.ResizingStyle = resizingStyle
+	// Set custom styles for easy identification — compare via resolved FG color
+	ctx := color.ColorContext{}
+	normalFG := tcell.ColorWhite
+	focusedFG := tcell.ColorGreen
+	resizingFG2 := tcell.ColorRed
+	b.Style = color.DynamicStyle{FG: color.Solid(normalFG)}
+	b.FocusedStyle = color.DynamicStyle{FG: color.Solid(focusedFG)}
+	b.ResizingStyle = color.DynamicStyle{FG: color.Solid(resizingFG2)}
 
 	// Normal state
 	got := b.determineStyle()
-	if got != normalStyle {
+	if got.FG.Resolve(ctx) != normalFG {
 		t.Error("expected normal style when not focused and not resizing")
 	}
 
@@ -142,21 +144,21 @@ func TestBorder_DetermineStyle_Resizing(t *testing.T) {
 	b.SetFocusable(true)
 	b.BaseWidget.Focus()
 	got = b.determineStyle()
-	if got != focusedStyle {
+	if got.FG.Resolve(ctx) != focusedFG {
 		t.Error("expected focused style when focused")
 	}
 
 	// Resizing takes priority over focused
 	b.IsResizing = true
 	got = b.determineStyle()
-	if got != resizingStyle {
+	if got.FG.Resolve(ctx) != resizingFG2 {
 		t.Error("expected resizing style to take priority over focused")
 	}
 
 	// Resizing without focus
 	b.BaseWidget.Blur()
 	got = b.determineStyle()
-	if got != resizingStyle {
+	if got.FG.Resolve(ctx) != resizingFG2 {
 		t.Error("expected resizing style even when not focused")
 	}
 }
@@ -168,7 +170,7 @@ func TestBorder_ResizingStyleDraw(t *testing.T) {
 	b.Resize(10, 5)
 
 	resizingFG := tcell.NewRGBColor(255, 0, 0)
-	b.ResizingStyle = tcell.StyleDefault.Foreground(resizingFG)
+	b.ResizingStyle = color.StyleFrom(tcell.StyleDefault.Foreground(resizingFG))
 	b.IsResizing = true
 
 	p := core.NewPainter(buf, core.Rect{X: 0, Y: 0, W: 10, H: 5})

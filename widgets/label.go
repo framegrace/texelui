@@ -2,8 +2,9 @@ package widgets
 
 import (
 	"github.com/gdamore/tcell/v2"
-	"github.com/framegrace/texelui/theme"
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/theme"
 )
 
 // Alignment specifies how text is aligned within a widget.
@@ -20,7 +21,7 @@ const (
 type Label struct {
 	core.BaseWidget
 	Text  string
-	Style tcell.Style
+	Style color.DynamicStyle
 	Align Alignment
 
 	// Invalidation callback
@@ -40,7 +41,10 @@ func NewLabel(text string) *Label {
 	tm := theme.Get()
 	fg := tm.GetSemanticColor("text.primary")
 	bg := tm.GetSemanticColor("bg.surface")
-	l.Style = tcell.StyleDefault.Foreground(fg).Background(bg)
+	l.Style = color.DynamicStyle{
+		FG: color.Solid(fg),
+		BG: color.Solid(bg),
+	}
 
 	// Auto-size to fit text
 	l.Resize(len(text), 1)
@@ -53,10 +57,15 @@ func NewLabel(text string) *Label {
 
 // Draw renders the label text with the configured alignment.
 func (l *Label) Draw(painter *core.Painter) {
-	style := l.EffectiveStyle(l.Style)
+	ds := l.Style
+	if l.IsFocused() {
+		ds.Attrs |= tcell.AttrBold
+	}
 
 	// Fill background
-	painter.Fill(core.Rect{X: l.Rect.X, Y: l.Rect.Y, W: l.Rect.W, H: l.Rect.H}, ' ', style)
+	if !l.Transparent {
+		painter.FillDynamic(core.Rect{X: l.Rect.X, Y: l.Rect.Y, W: l.Rect.W, H: l.Rect.H}, ' ', ds)
+	}
 
 	if l.Text == "" {
 		return
@@ -80,7 +89,11 @@ func (l *Label) Draw(painter *core.Painter) {
 
 	// Render text (center vertically if height > 1)
 	y := l.Rect.Y + l.Rect.H/2
-	painter.DrawText(startX, y, l.Text, style)
+	if l.Transparent {
+		painter.DrawDynamicTextKeepBG(startX, y, l.Text, ds)
+	} else {
+		painter.DrawDynamicText(startX, y, l.Text, ds)
+	}
 }
 
 // SetInvalidator allows the UI manager to inject a dirty-region invalidator.

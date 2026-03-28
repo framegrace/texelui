@@ -10,8 +10,9 @@ import (
 	"sort"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/framegrace/texelui/theme"
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/theme"
 )
 
 // FormRow represents a single row in a Form.
@@ -45,7 +46,7 @@ func DefaultFormConfig() FormConfig {
 // their associated field has focus.
 type Form struct {
 	core.BaseWidget
-	Style  tcell.Style
+	Style  color.DynamicStyle
 	Config FormConfig
 
 	rows           []FormRow
@@ -67,7 +68,10 @@ func NewFormWithConfig(config FormConfig) *Form {
 	fg := tm.GetSemanticColor("text.primary")
 
 	f := &Form{
-		Style:          tcell.StyleDefault.Background(bg).Foreground(fg),
+		Style: color.DynamicStyle{
+			FG: color.Solid(fg),
+			BG: color.Solid(bg),
+		},
 		Config:         config,
 		lastFocusedIdx: -1,
 	}
@@ -138,8 +142,22 @@ func (f *Form) SetInvalidator(fn func(core.Rect)) {
 
 // Draw renders the form with all rows.
 func (f *Form) Draw(painter *core.Painter) {
-	style := f.EffectiveStyle(f.Style)
-	painter.Fill(f.Rect, ' ', style)
+	ds := f.Style
+	if f.IsFocused() {
+		ds.Attrs |= tcell.AttrBold
+	}
+	if !f.Transparent {
+		painter.FillDynamic(f.Rect, ' ', ds)
+	}
+
+	// Propagate transparency to children so gradient shows through
+	if f.Transparent {
+		for _, row := range f.rows {
+			if row.Label != nil {
+				row.Label.Transparent = true
+			}
+		}
+	}
 
 	// Collect all widgets with their draw order
 	type drawItem struct {
@@ -195,7 +213,7 @@ func (f *Form) syncLabelFocus(label *Label, focused bool) {
 		// Use primary text color (brighter) when focused
 		fg := tm.GetSemanticColor("text.primary")
 		bg := tm.GetSemanticColor("bg.surface")
-		label.Style = tcell.StyleDefault.Foreground(fg).Background(bg).Bold(true)
+		label.Style = color.StyleFrom(tcell.StyleDefault.Foreground(fg).Background(bg).Bold(true))
 	} else {
 		// Use secondary/dimmed text color when not focused
 		fg := tm.GetSemanticColor("text.secondary")
@@ -203,7 +221,7 @@ func (f *Form) syncLabelFocus(label *Label, focused bool) {
 			fg = tm.GetSemanticColor("text.primary")
 		}
 		bg := tm.GetSemanticColor("bg.surface")
-		label.Style = tcell.StyleDefault.Foreground(fg).Background(bg).Dim(true)
+		label.Style = color.StyleFrom(tcell.StyleDefault.Foreground(fg).Background(bg).Dim(true))
 	}
 }
 

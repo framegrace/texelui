@@ -2,8 +2,9 @@ package widgets
 
 import (
 	"github.com/gdamore/tcell/v2"
-	"github.com/framegrace/texelui/theme"
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/theme"
 )
 
 // Input is a single-line text entry widget with horizontal scrolling.
@@ -12,8 +13,8 @@ type Input struct {
 	Text       string
 	CaretPos   int // Caret position in runes (0 to len([]rune(Text)))
 	OffX       int // Horizontal scroll offset
-	Style      tcell.Style
-	CaretStyle tcell.Style
+	Style      color.DynamicStyle
+	CaretStyle color.DynamicStyle
 
 	// Optional placeholder text shown when empty
 	Placeholder string
@@ -45,10 +46,15 @@ func NewInput() *Input {
 	caret := tm.GetSemanticColor("caret")
 
 	i := &Input{
-		Text:       "",
-		CaretPos:   0,
-		Style:      tcell.StyleDefault.Foreground(fg).Background(bg),
-		CaretStyle: tcell.StyleDefault.Foreground(caret),
+		Text:     "",
+		CaretPos: 0,
+		Style: color.DynamicStyle{
+			FG: color.Solid(fg),
+			BG: color.Solid(bg),
+		},
+		CaretStyle: color.DynamicStyle{
+			FG: color.Solid(caret),
+		},
 	}
 
 	// Configure focused style
@@ -82,25 +88,34 @@ func (i *Input) Blur() {
 
 // Draw renders the input field with text and caret.
 func (i *Input) Draw(painter *core.Painter) {
-	style := i.EffectiveStyle(i.Style)
+	ds := i.Style
 	focused := i.IsFocused()
 
 	// When focused, add underline to show the input field extent
 	if focused {
-		style = style.Underline(true)
+		ds.Attrs |= tcell.AttrUnderline
 	}
 
 	// Fill background with underline when focused
-	painter.Fill(core.Rect{X: i.Rect.X, Y: i.Rect.Y, W: i.Rect.W, H: 1}, ' ', style)
+	if !i.Transparent {
+		painter.FillDynamic(core.Rect{X: i.Rect.X, Y: i.Rect.Y, W: i.Rect.W, H: 1}, ' ', ds)
+	}
 
 	// Determine what to display
 	displayText := i.Text
 	if displayText == "" && i.Placeholder != "" && !focused {
 		// Show placeholder in dimmed color when not focused and empty
-		_, bg, _ := style.Decompose()
-		// Create a dimmed version by using gray
-		placeholderStyle := tcell.StyleDefault.Foreground(tcell.ColorGray).Background(bg)
-		painter.DrawText(i.Rect.X, i.Rect.Y, i.Placeholder, placeholderStyle)
+		ctx := color.ColorContext{}
+		bg := ds.BG.Resolve(ctx)
+		placeholderStyle := color.DynamicStyle{
+			FG: color.Solid(tcell.ColorGray),
+			BG: color.Solid(bg),
+		}
+		if i.Transparent {
+			painter.DrawDynamicTextKeepBG(i.Rect.X, i.Rect.Y, i.Placeholder, placeholderStyle)
+		} else {
+			painter.DrawDynamicText(i.Rect.X, i.Rect.Y, i.Placeholder, placeholderStyle)
+		}
 		return
 	}
 
@@ -112,13 +127,17 @@ func (i *Input) Draw(painter *core.Painter) {
 
 	// Render visible portion of text
 	x := i.Rect.X
+	drawText := painter.DrawDynamicText
+	if i.Transparent {
+		drawText = painter.DrawDynamicTextKeepBG
+	}
 	for idx := i.OffX; idx < len(runes) && x < i.Rect.X+i.Rect.W; idx++ {
-		painter.DrawText(x, i.Rect.Y, string(runes[idx]), style)
+		drawText(x, i.Rect.Y, string(runes[idx]), ds)
 		x++
 	}
 
 	// Draw caret if focused
-	if i.IsFocused() {
+	if focused {
 		caretX := i.Rect.X + i.CaretPos - i.OffX
 		if caretX >= i.Rect.X && caretX < i.Rect.X+i.Rect.W {
 			// Determine what character is under the caret
@@ -127,19 +146,28 @@ func (i *Input) Draw(painter *core.Painter) {
 				ch = runes[i.CaretPos]
 			}
 
-			// Determine caret style based on mode
-			fg, bg, _ := style.Decompose()
-			var caretStyle tcell.Style
+			// Determine caret style based on mode — resolve colors for swap
+			ctx := color.ColorContext{}
+			fg := ds.FG.Resolve(ctx)
+			bg := ds.BG.Resolve(ctx)
+			var caretDS color.DynamicStyle
 			if i.replaceMode {
 				// Underline caret in replace mode
-				caretStyle = tcell.StyleDefault.Background(bg).Foreground(fg).Underline(true)
+				caretDS = color.DynamicStyle{
+					FG:    color.Solid(fg),
+					BG:    color.Solid(bg),
+					Attrs: tcell.AttrUnderline,
+				}
 			} else {
 				// Reverse video caret in insert mode
-				caretStyle = tcell.StyleDefault.Background(fg).Foreground(bg)
+				caretDS = color.DynamicStyle{
+					FG: color.Solid(bg),
+					BG: color.Solid(fg),
+				}
 			}
 
 			// Draw the character with caret styling
-			painter.SetCell(caretX, i.Rect.Y, ch, caretStyle)
+			painter.SetDynamicCell(caretX, i.Rect.Y, ch, caretDS)
 		}
 	}
 }

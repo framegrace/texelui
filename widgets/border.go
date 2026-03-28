@@ -2,21 +2,22 @@ package widgets
 
 import (
     "github.com/gdamore/tcell/v2"
-    "github.com/framegrace/texelui/theme"
+    "github.com/framegrace/texelui/color"
     "github.com/framegrace/texelui/core"
+    "github.com/framegrace/texelui/theme"
 )
 
 // Border draws a border around its Rect and can optionally have a child rendered inside.
 type Border struct {
     core.BaseWidget
-    Style   tcell.Style
+    Style   color.DynamicStyle
     Charset [6]rune // h, v, tl, tr, bl, br
     Child   core.Widget
     inv     func(core.Rect)
     // FocusedStyle optionally overrides Style when this border (or a focused descendant) is focused.
-    FocusedStyle tcell.Style
+    FocusedStyle color.DynamicStyle
     // ResizingStyle applied when IsResizing is true. Takes priority over FocusedStyle.
-    ResizingStyle tcell.Style
+    ResizingStyle color.DynamicStyle
 
     // Title text displayed in top border row, left-aligned with padding.
     Title string
@@ -58,11 +59,18 @@ func newBorderWithStyle(style tcell.Style) *Border {
 		bg = tm.GetSemanticColor("bg.surface")
 	}
 	// Update style with resolved colors
-	b.Style = tcell.StyleDefault.Foreground(fg).Background(bg).Attributes(attr)
+	b.Style = color.DynamicStyle{
+		FG:    color.Solid(fg),
+		BG:    color.Solid(bg),
+		Attrs: attr,
+	}
 
 	// Focused style uses border.active foreground
 	ffg := tm.GetSemanticColor("border.active")
-	b.FocusedStyle = tcell.StyleDefault.Foreground(ffg).Background(bg)
+	b.FocusedStyle = color.DynamicStyle{
+		FG: color.Solid(ffg),
+		BG: color.Solid(bg),
+	}
 	b.SetFocusedStyle(tcell.StyleDefault.Foreground(ffg).Background(bg), true)
 
 	// Resizing style uses border.resizing semantic color
@@ -70,7 +78,10 @@ func newBorderWithStyle(style tcell.Style) *Border {
 	if rfg == tcell.ColorDefault {
 		rfg = ffg
 	}
-	b.ResizingStyle = tcell.StyleDefault.Foreground(rfg).Background(bg)
+	b.ResizingStyle = color.DynamicStyle{
+		FG: color.Solid(rfg),
+		BG: color.Solid(bg),
+	}
 
 	// Default rounded corner charset
 	b.Charset = [6]rune{'─', '│', '╭', '╮', '╰', '╯'}
@@ -128,7 +139,14 @@ func (b *Border) Resize(w, h int) {
 }
 
 func (b *Border) Draw(p *core.Painter) {
-	style := b.determineStyle()
+	ds := b.determineStyle()
+
+	// Resolve to tcell.Style for DrawBorder/SetCell which require it
+	ctx := color.ColorContext{}
+	style := tcell.StyleDefault.
+		Foreground(ds.FG.Resolve(ctx)).
+		Background(ds.BG.Resolve(ctx)).
+		Attributes(ds.Attrs)
 
 	if b.SeparatorMode {
 		b.drawSeparator(p, style)
@@ -144,16 +162,16 @@ func (b *Border) Draw(p *core.Painter) {
 	}
 }
 
-// determineStyle returns the appropriate style based on state priority:
+// determineStyle returns the appropriate DynamicStyle based on state priority:
 // resizing > focused > normal.
-func (b *Border) determineStyle() tcell.Style {
+func (b *Border) determineStyle() color.DynamicStyle {
 	if b.IsResizing {
 		return b.ResizingStyle
 	}
 	if b.IsFocused() || core.IsDescendantFocused(b.Child) {
 		return b.FocusedStyle
 	}
-	return b.EffectiveStyle(b.Style)
+	return b.Style
 }
 
 // drawTitle renders title text in the top border row with space padding.

@@ -25,11 +25,12 @@ type ZIndexer interface {
 
 // BaseWidget provides common fields/behaviour for widgets.
 type BaseWidget struct {
-	Rect      Rect
-	focused   bool
-	focusable bool
-	zIndex    int // z-ordering: higher values draw on top
-	helpText  string
+	Rect        Rect
+	Transparent bool // When true, widget skips background fill (parent shows through)
+	focused     bool
+	focusable   bool
+	zIndex      int // z-ordering: higher values draw on top
+	helpText    string
 	// Optional focus styling: if enabled, widgets may use FocusedStyle when focused.
 	focusStyleEnabled bool
 	focusedStyle      tcell.Style

@@ -2,8 +2,9 @@ package widgets
 
 import (
 	"github.com/gdamore/tcell/v2"
-	"github.com/framegrace/texelui/theme"
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/theme"
 )
 
 // Button is a clickable widget that triggers an action when activated.
@@ -11,7 +12,7 @@ import (
 type Button struct {
 	core.BaseWidget
 	Text    string
-	Style   tcell.Style
+	Style   color.DynamicStyle
 	OnClick func()
 
 	// Visual state
@@ -33,7 +34,10 @@ func NewButton(text string) *Button {
 	tm := theme.Get()
 	fg := tm.GetSemanticColor("text.inverse")
 	bg := tm.GetSemanticColor("action.primary")
-	b.Style = tcell.StyleDefault.Foreground(fg).Background(bg)
+	b.Style = color.DynamicStyle{
+		FG: color.Solid(fg),
+		BG: color.Solid(bg),
+	}
 
 	// Configure focused style
 	focusFg := tm.GetSemanticColor("text.inverse")
@@ -51,16 +55,20 @@ func NewButton(text string) *Button {
 
 // Draw renders the button with text centered and optional brackets.
 func (b *Button) Draw(painter *core.Painter) {
-	style := b.EffectiveStyle(b.Style)
+	ds := b.Style
+	if b.IsFocused() {
+		ds.Attrs |= tcell.AttrBold
+	}
 
 	// Invert colors when pressed for visual feedback
 	if b.pressed {
-		fg, bg, attr := style.Decompose()
-		style = tcell.StyleDefault.Foreground(bg).Background(fg).Attributes(attr)
+		ds.FG, ds.BG = ds.BG, ds.FG
 	}
 
 	// Fill background
-	painter.Fill(core.Rect{X: b.Rect.X, Y: b.Rect.Y, W: b.Rect.W, H: b.Rect.H}, ' ', style)
+	if !b.Transparent {
+		painter.FillDynamic(core.Rect{X: b.Rect.X, Y: b.Rect.Y, W: b.Rect.W, H: b.Rect.H}, ' ', ds)
+	}
 
 	if b.Text == "" {
 		return
@@ -79,7 +87,11 @@ func (b *Button) Draw(painter *core.Painter) {
 	x := b.Rect.X + (b.Rect.W-textLen)/2
 	y := b.Rect.Y + b.Rect.H/2
 
-	painter.DrawText(x, y, displayText, style)
+	if b.Transparent {
+		painter.DrawDynamicTextKeepBG(x, y, displayText, ds)
+	} else {
+		painter.DrawDynamicText(x, y, displayText, ds)
+	}
 }
 
 // HandleKey processes keyboard input. Enter or Space activates the button.

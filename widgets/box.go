@@ -8,8 +8,9 @@ package widgets
 
 import (
 	"github.com/gdamore/tcell/v2"
-	"github.com/framegrace/texelui/theme"
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/theme"
 )
 
 // BoxAlign specifies how children are aligned within available space.
@@ -33,7 +34,7 @@ type boxChild struct {
 // boxBase is the common implementation for VBox and HBox.
 type boxBase struct {
 	core.BaseWidget
-	Style    tcell.Style
+	Style    color.DynamicStyle
 	Spacing  int      // Space between children
 	Align    BoxAlign // Alignment of children
 	MaxWidth int      // When > 0, caps child width in VBox (cross-axis)
@@ -50,7 +51,7 @@ func newBoxBase(vertical bool) *boxBase {
 	fg := tm.GetSemanticColor("text.primary")
 
 	b := &boxBase{
-		Style:          tcell.StyleDefault.Background(bg).Foreground(fg),
+		Style:          color.DynamicStyle{FG: color.Solid(fg), BG: color.Solid(bg)},
 		Spacing:        0,
 		Align:          BoxAlignStart,
 		lastFocusedIdx: -1,
@@ -116,8 +117,13 @@ func (b *boxBase) SetInvalidator(fn func(core.Rect)) {
 
 // Draw renders all children.
 func (b *boxBase) Draw(painter *core.Painter) {
-	style := b.EffectiveStyle(b.Style)
-	painter.Fill(b.Rect, ' ', style)
+	ds := b.Style
+	if b.IsFocused() {
+		ds.Attrs |= tcell.AttrBold
+	}
+	if !b.Transparent {
+		painter.FillDynamic(b.Rect, ' ', ds)
+	}
 
 	for _, child := range b.children {
 		child.widget.Draw(painter)

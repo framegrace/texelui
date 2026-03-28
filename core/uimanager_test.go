@@ -5,6 +5,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/primitives"
 	"github.com/framegrace/texelui/scroll"
@@ -17,7 +18,7 @@ func TestUIManagerRendersPaneAndTextArea(t *testing.T) {
 
 	pane := widgets.NewPane()
 	pane.Resize(20, 5)
-	pane.Style = tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorWhite)
+	pane.Style = color.StyleFrom(tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorWhite))
 	ui.AddWidget(pane)
 
 	ta := widgets.NewTextArea()
@@ -189,7 +190,7 @@ func TestDualTextAreasClickFocusAndType(t *testing.T) {
 	lb.SetPosition(0, 0)
 	lb.Resize(10, 4)
 	// Make focus color identifiable for the test (left border green)
-	lb.FocusedStyle = tcell.StyleDefault.Foreground(tcell.ColorGreen)
+	lb.FocusedStyle = color.StyleFrom(tcell.StyleDefault.Foreground(tcell.ColorGreen))
 	lta := widgets.NewTextArea()
 	lta.Resize(8, 2)
 	lb.SetChild(lta)
@@ -199,7 +200,7 @@ func TestDualTextAreasClickFocusAndType(t *testing.T) {
 	rb := widgets.NewBorder()
 	rb.SetPosition(10, 0)
 	rb.Resize(10, 4)
-	rb.FocusedStyle = tcell.StyleDefault.Foreground(tcell.ColorTeal)
+	rb.FocusedStyle = color.StyleFrom(tcell.StyleDefault.Foreground(tcell.ColorTeal))
 	rta := widgets.NewTextArea()
 	rta.Resize(8, 2)
 	rb.SetChild(rta)
@@ -229,8 +230,8 @@ func TestDualTextAreasClickFocusAndType(t *testing.T) {
 
 	// Check border highlight colors:
 	// Left border top-left corner is at (0,0), right border top-left at (10,0)
-	lfg, _, _ := lb.FocusedStyle.Decompose()
-	rfg, _, _ := rb.FocusedStyle.Decompose()
+	lfg := lb.FocusedStyle.FG.Resolve(color.ColorContext{})
+	rfg := rb.FocusedStyle.FG.Resolve(color.ColorContext{})
 	// Left is focused now; its corner should use FocusedStyle FG
 	if gotFG, _, _ := buf[0][0].Style.Decompose(); gotFG != lfg {
 		t.Fatalf("left border FG not focused; got %v want %v", gotFG, lfg)

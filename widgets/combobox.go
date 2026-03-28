@@ -10,9 +10,10 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/framegrace/texelui/theme"
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/primitives"
+	"github.com/framegrace/texelui/theme"
 )
 
 // ComboBox combines a text input with a dropdown list.
@@ -127,21 +128,20 @@ func (cb *ComboBox) renderDropdownItem(p *core.Painter, rect core.Rect, item pri
 	bg := tm.GetSemanticColor("bg.surface")
 	commitBg := tm.GetSemanticColor("accent")
 
-	baseStyle := tcell.StyleDefault.Foreground(fg).Background(bg)
+	ds := color.DynamicStyle{FG: color.Solid(fg), BG: color.Solid(bg)}
 
 	isCommitted := item.Text == cb.Text
 
-	style := baseStyle
 	if isCommitted {
 		// Committed selection (item matching cb.Text) - accent background
-		style = tcell.StyleDefault.Foreground(bg).Background(commitBg)
+		ds = color.DynamicStyle{FG: color.Solid(bg), BG: color.Solid(commitBg)}
 	} else if selected {
 		// Active highlight (keyboard navigation) - reverse fg/bg
-		style = baseStyle.Reverse(true)
+		ds.Attrs |= tcell.AttrReverse
 	}
 
 	// Fill row
-	p.Fill(rect, ' ', style)
+	p.FillDynamic(rect, ' ', ds)
 
 	// Draw item text
 	text := item.Text
@@ -149,7 +149,7 @@ func (cb *ComboBox) renderDropdownItem(p *core.Painter, rect core.Rect, item pri
 	if len(text) > maxLen && maxLen > 0 {
 		text = text[:maxLen]
 	}
-	p.DrawText(rect.X, rect.Y, text, style)
+	p.DrawDynamicText(rect.X, rect.Y, text, ds)
 }
 
 // SetValue sets the current text value.
@@ -245,23 +245,25 @@ func (cb *ComboBox) Draw(p *core.Painter) {
 	bg := tm.GetSemanticColor("bg.surface")
 	dimFg := tm.GetSemanticColor("text.muted")
 	accentFg := tm.GetSemanticColor("accent")
-	baseStyle := tcell.StyleDefault.Foreground(fg).Background(bg)
-	dimStyle := tcell.StyleDefault.Foreground(dimFg).Background(bg)
-	btnStyle := tcell.StyleDefault.Foreground(fg).Background(bg)
+	baseDS := color.DynamicStyle{FG: color.Solid(fg), BG: color.Solid(bg)}
+	dimDS := color.DynamicStyle{FG: color.Solid(dimFg), BG: color.Solid(bg)}
+	btnDS := color.DynamicStyle{FG: color.Solid(fg), BG: color.Solid(bg)}
 
 	focused := cb.IsFocused()
 	if focused {
 		// Add underline to show the input field extent when focused
-		baseStyle = baseStyle.Underline(true)
-		dimStyle = dimStyle.Underline(true)
-		btnStyle = tcell.StyleDefault.Foreground(accentFg).Background(bg)
+		baseDS.Attrs |= tcell.AttrUnderline
+		dimDS.Attrs |= tcell.AttrUnderline
+		btnDS = color.DynamicStyle{FG: color.Solid(accentFg), BG: color.Solid(bg)}
 	}
 
 	// Fill background (with underline when focused for input area)
 	inputWidth := cb.Rect.W - 3 // Reserve 3 chars for button " ▼ "
-	p.Fill(core.Rect{X: cb.Rect.X, Y: cb.Rect.Y, W: inputWidth, H: 1}, ' ', baseStyle)
-	// Fill button area without underline
-	p.Fill(core.Rect{X: cb.Rect.X + inputWidth, Y: cb.Rect.Y, W: 3, H: 1}, ' ', btnStyle)
+	if !cb.Transparent {
+		p.FillDynamic(core.Rect{X: cb.Rect.X, Y: cb.Rect.Y, W: inputWidth, H: 1}, ' ', baseDS)
+		// Fill button area without underline
+		p.FillDynamic(core.Rect{X: cb.Rect.X + inputWidth, Y: cb.Rect.Y, W: 3, H: 1}, ' ', btnDS)
+	}
 
 	x := cb.Rect.X
 	y := cb.Rect.Y
@@ -275,7 +277,7 @@ func (cb *ComboBox) Draw(p *core.Painter) {
 		if i >= inputWidth {
 			break
 		}
-		p.SetCell(x+i, y, ch, baseStyle)
+		p.SetDynamicCell(x+i, y, ch, baseDS)
 	}
 
 	// Draw autocomplete suggestion (dimmed)
@@ -286,18 +288,18 @@ func (cb *ComboBox) Draw(p *core.Painter) {
 			if startX+i >= x+inputWidth {
 				break
 			}
-			p.SetCell(startX+i, y, ch, dimStyle)
+			p.SetDynamicCell(startX+i, y, ch, dimDS)
 		}
 	}
 
 	// Draw placeholder if empty
 	if displayText == "" && cb.Placeholder != "" && !focused {
-		placeholderStyle := tcell.StyleDefault.Foreground(dimFg).Background(bg)
+		placeholderDS := color.DynamicStyle{FG: color.Solid(dimFg), BG: color.Solid(bg)}
 		for i, ch := range cb.Placeholder {
 			if i >= inputWidth {
 				break
 			}
-			p.SetCell(x+i, y, ch, placeholderStyle)
+			p.SetDynamicCell(x+i, y, ch, placeholderDS)
 		}
 	}
 
@@ -305,7 +307,8 @@ func (cb *ComboBox) Draw(p *core.Painter) {
 	if focused && cb.Editable {
 		cursorX := x + cb.cursorPos
 		if cursorX < x+inputWidth {
-			cursorStyle := baseStyle.Reverse(true)
+			cursorDS := baseDS
+			cursorDS.Attrs |= tcell.AttrReverse
 			ch := ' '
 			if cb.cursorPos < len(cb.Text) {
 				ch = rune(cb.Text[cb.cursorPos])
@@ -313,7 +316,7 @@ func (cb *ComboBox) Draw(p *core.Painter) {
 				// Show autocomplete char under cursor
 				ch = rune(autocomplete[cb.cursorPos])
 			}
-			p.SetCell(cursorX, y, ch, cursorStyle)
+			p.SetDynamicCell(cursorX, y, ch, cursorDS)
 		}
 	}
 
@@ -323,9 +326,9 @@ func (cb *ComboBox) Draw(p *core.Painter) {
 	if cb.expanded {
 		btnChar = '▲'
 	}
-	p.SetCell(btnX, y, ' ', btnStyle)
-	p.SetCell(btnX+1, y, btnChar, btnStyle)
-	p.SetCell(btnX+2, y, ' ', btnStyle)
+	p.SetDynamicCell(btnX, y, ' ', btnDS)
+	p.SetDynamicCell(btnX+1, y, btnChar, btnDS)
+	p.SetDynamicCell(btnX+2, y, ' ', btnDS)
 
 	// Draw dropdown if expanded
 	if cb.expanded {
@@ -338,7 +341,7 @@ func (cb *ComboBox) drawDropdown(p *core.Painter) {
 	tm := theme.Get()
 	bg := tm.GetSemanticColor("bg.surface")
 	borderFg := tm.GetSemanticColor("border.default")
-	borderStyle := tcell.StyleDefault.Foreground(borderFg).Background(bg)
+	borderDS := color.DynamicStyle{FG: color.Solid(borderFg), BG: color.Solid(bg)}
 
 	dr := cb.dropdownRect()
 
@@ -353,22 +356,22 @@ func (cb *ComboBox) drawDropdown(p *core.Painter) {
 
 	// Draw top border with normal corners
 	for x := boxX; x < boxX+boxW; x++ {
-		p.SetCell(x, topY, '─', borderStyle)
+		p.SetDynamicCell(x, topY, '─', borderDS)
 	}
-	p.SetCell(boxX, topY, '╭', borderStyle)
-	p.SetCell(boxX+boxW-1, topY, '╮', borderStyle)
+	p.SetDynamicCell(boxX, topY, '╭', borderDS)
+	p.SetDynamicCell(boxX+boxW-1, topY, '╮', borderDS)
 
 	// Draw bottom border
 	for x := boxX; x < boxX+boxW; x++ {
-		p.SetCell(x, bottomY, '─', borderStyle)
+		p.SetDynamicCell(x, bottomY, '─', borderDS)
 	}
-	p.SetCell(boxX, bottomY, '╰', borderStyle)
-	p.SetCell(boxX+boxW-1, bottomY, '╯', borderStyle)
+	p.SetDynamicCell(boxX, bottomY, '╰', borderDS)
+	p.SetDynamicCell(boxX+boxW-1, bottomY, '╯', borderDS)
 
 	// Draw side borders
 	for row := 0; row < dr.H; row++ {
-		p.SetCell(boxX, contentY+row, '│', borderStyle)
-		p.SetCell(boxX+boxW-1, contentY+row, '│', borderStyle)
+		p.SetDynamicCell(boxX, contentY+row, '│', borderDS)
+		p.SetDynamicCell(boxX+boxW-1, contentY+row, '│', borderDS)
 	}
 
 	// Position and draw the list inside the borders

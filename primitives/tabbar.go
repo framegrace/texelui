@@ -7,6 +7,7 @@
 package primitives
 
 import (
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/theme"
 	"github.com/gdamore/tcell/v2"
@@ -18,7 +19,7 @@ const (
 	plRightTriangle = '\ue0b8'
 	plLeftThinLine  = '\ue0bb'
 	plRightThinLine = '\ue0b9'
-	blendChar       = '\u2580' // Upper half block
+	blendChar       = '\u2594' // Upper one-eighth block (thin accent line)
 )
 
 // TabBarStyle controls the colors used by the tab bar.
@@ -30,7 +31,7 @@ type TabBarStyle struct {
 	InactiveFG tcell.Color
 	BarBG      tcell.Color
 	ContentBG  tcell.Color
-	NoBlendRow bool
+	NoBlendRow bool // No blend row at all (height=1)
 }
 
 // TabItem represents a single tab in a TabBar.
@@ -232,17 +233,30 @@ func (tb *TabBar) Draw(painter *core.Painter) {
 		x++
 	}
 
+	// Remember where tabs end for the blend line gradient
+	tabsEndX := x
+
 	// Fill rest of row 0 with bar background
 	for x < maxX {
 		painter.SetCell(x, y, ' ', barStyle)
 		x++
 	}
 
-	// Row 1: blend row (if enabled)
+	// Row 1: blend line with 3-stop gradient
+	// accent → accent (at tab end %) → contentBG (at 100%)
 	if !tb.Style.NoBlendRow && tb.Rect.H >= 2 {
-		blendStyle := tcell.StyleDefault.Foreground(s.ActiveBG).Background(s.ContentBG)
+		// Calculate the tab-end position as a percentage of total width
+		tabEndPct := float32(tabsEndX-tb.Rect.X) / float32(max(tb.Rect.W, 1))
+		blendFG := color.Linear(0,
+			color.Stop(0, s.ActiveBG),
+			color.Stop(tabEndPct, s.ActiveBG),
+			color.Stop(1, s.ContentBG),
+		).WithLocal().Build()
+
+		blendDS := color.DynamicStyle{FG: blendFG, BG: color.Solid(s.ContentBG)}
+		blendY := y + 1
 		for bx := tb.Rect.X; bx < maxX; bx++ {
-			painter.SetCell(bx, y+1, blendChar, blendStyle)
+			painter.SetDynamicCell(bx, blendY, blendChar, blendDS)
 		}
 	}
 }

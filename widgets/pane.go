@@ -4,15 +4,16 @@ import (
 	"sort"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/framegrace/texelui/theme"
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/theme"
 )
 
 // Pane is a container widget that fills its area with a background style
 // and can contain child widgets.
 type Pane struct {
 	core.BaseWidget
-	Style    tcell.Style
+	Style    color.DynamicStyle
 	children []core.Widget
 	inv      func(core.Rect)
 
@@ -34,7 +35,10 @@ func NewPane() *Pane {
 	tm := theme.Get()
 	fg := tm.GetSemanticColor("text.primary")
 	bg := tm.GetSemanticColor("bg.surface")
-	p.Style = tcell.StyleDefault.Foreground(fg).Background(bg)
+	p.Style = color.DynamicStyle{
+		FG: color.Solid(fg),
+		BG: color.Solid(bg),
+	}
 
 	// Configure focus style
 	p.SetFocusedStyle(tcell.StyleDefault.Background(bg).Foreground(fg), true)
@@ -85,8 +89,13 @@ func (p *Pane) SetInvalidator(fn func(core.Rect)) {
 
 // Draw fills the pane background and draws all children sorted by z-index.
 func (p *Pane) Draw(painter *core.Painter) {
-	style := p.EffectiveStyle(p.Style)
-	painter.Fill(core.Rect{X: p.Rect.X, Y: p.Rect.Y, W: p.Rect.W, H: p.Rect.H}, ' ', style)
+	ds := p.Style
+	if p.IsFocused() {
+		ds.Attrs |= tcell.AttrBold
+	}
+	if !p.Transparent {
+		painter.FillDynamic(core.Rect{X: p.Rect.X, Y: p.Rect.Y, W: p.Rect.W, H: p.Rect.H}, ' ', ds)
+	}
 
 	// Sort children by z-index (lower z-index drawn first, higher on top)
 	sorted := make([]core.Widget, len(p.children))

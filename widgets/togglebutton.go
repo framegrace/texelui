@@ -3,9 +3,10 @@ package widgets
 import (
 	"unicode/utf8"
 
+	"github.com/gdamore/tcell/v2"
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/theme"
-	"github.com/gdamore/tcell/v2"
 )
 
 // ToggleButton is a compact clickable indicator that shows on/off state.
@@ -18,7 +19,7 @@ type ToggleButton struct {
 	Active   bool
 	Disabled bool
 	OnToggle func(active bool)
-	Style    tcell.Style
+	Style    color.DynamicStyle
 
 	// Invalidation callback
 	inv func(core.Rect)
@@ -44,7 +45,10 @@ func NewToggleButton(label string) *ToggleButton {
 		bg = tcell.ColorBlack
 	}
 
-	tb.Style = tcell.StyleDefault.Foreground(fg).Background(bg)
+	tb.Style = color.DynamicStyle{
+		FG: color.Solid(fg),
+		BG: color.Solid(bg),
+	}
 
 	tb.SetPosition(0, 0)
 	tb.Resize(utf8.RuneCountInString(label), 1)
@@ -56,8 +60,16 @@ func NewToggleButton(label string) *ToggleButton {
 // Draw renders the toggle button label with normal, reversed, or faded style.
 // Disabled+Active shows a faded reversed style (visible but non-interactive).
 func (tb *ToggleButton) Draw(painter *core.Painter) {
-	style := tb.EffectiveStyle(tb.Style)
-	fg, bg, attr := style.Decompose()
+	ds := tb.Style
+	if tb.IsFocused() {
+		ds.Attrs |= tcell.AttrBold
+	}
+
+	// For active/disabled states we need resolved colors
+	ctx := color.ColorContext{}
+	fg := ds.FG.Resolve(ctx)
+	bg := ds.BG.Resolve(ctx)
+	attr := ds.Attrs
 	if tb.Active {
 		fg, bg = bg, fg
 	}
@@ -65,9 +77,15 @@ func (tb *ToggleButton) Draw(painter *core.Painter) {
 		fg = fadeColor(fg, bg, 0.35)
 		attr = 0
 	}
-	style = tcell.StyleDefault.Foreground(fg).Background(bg).Attributes(attr)
-	painter.Fill(core.Rect{X: tb.Rect.X, Y: tb.Rect.Y, W: tb.Rect.W, H: 1}, ' ', style)
-	painter.DrawText(tb.Rect.X, tb.Rect.Y, tb.Label, style)
+	resolved := color.DynamicStyle{
+		FG:    color.Solid(fg),
+		BG:    color.Solid(bg),
+		Attrs: attr,
+	}
+	if !tb.Transparent {
+		painter.FillDynamic(core.Rect{X: tb.Rect.X, Y: tb.Rect.Y, W: tb.Rect.W, H: 1}, ' ', resolved)
+	}
+	painter.DrawDynamicText(tb.Rect.X, tb.Rect.Y, tb.Label, resolved)
 }
 
 // fadeColor blends fg toward bg by ratio (0 = fg, 1 = bg).

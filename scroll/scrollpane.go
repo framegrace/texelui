@@ -9,6 +9,7 @@ package scroll
 
 import (
 	"github.com/gdamore/tcell/v2"
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/theme"
 	"github.com/framegrace/texelui/core"
 )
@@ -17,7 +18,7 @@ import (
 // It handles vertical scrolling with keyboard and mouse wheel input.
 type ScrollPane struct {
 	core.BaseWidget
-	Style           tcell.Style
+	Style           color.DynamicStyle
 	IndicatorStyle  tcell.Style
 	child           core.Widget
 	contentHeight   int // Total height of the child content
@@ -47,7 +48,7 @@ func NewScrollPane() *ScrollPane {
 	tm := theme.Get()
 	fg := tm.GetSemanticColor("text.primary")
 	bg := tm.GetSemanticColor("bg.surface")
-	sp.Style = tcell.StyleDefault.Foreground(fg).Background(bg)
+	sp.Style = color.DynamicStyle{FG: color.Solid(fg), BG: color.Solid(bg)}
 
 	// Set up scrollbar with text.primary color for thumb
 	thumbStyle := tcell.StyleDefault.Foreground(fg).Background(bg)
@@ -161,11 +162,16 @@ func (sp *ScrollPane) SetIndicatorConfig(config IndicatorConfig) {
 // layout managers work - the child's position should not be relied upon by
 // external code. The UI framework is single-threaded, so this is safe.
 func (sp *ScrollPane) Draw(painter *core.Painter) {
-	style := sp.EffectiveStyle(sp.Style)
+	ds := sp.Style
+	if sp.IsFocused() {
+		ds.Attrs |= tcell.AttrBold
+	}
 	rect := sp.Rect
 
 	// Fill background
-	painter.Fill(rect, ' ', style)
+	if !sp.Transparent {
+		painter.FillDynamic(rect, ' ', ds)
+	}
 
 	if sp.child == nil {
 		return
