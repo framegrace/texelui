@@ -10,9 +10,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gdamore/tcell/v2"
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/theme"
-	"github.com/gdamore/tcell/v2"
 )
 
 // MessageLevel defines the priority/styling of status messages.
@@ -312,19 +313,19 @@ func (s *StatusBar) Draw(p *core.Painter) {
 	bg := tm.GetSemanticColor("bg.surface")
 	sepFg := tm.GetSemanticColor("border.default")
 
-	bgStyle := tcell.StyleDefault.Foreground(fg).Background(bg)
-	sepStyle := tcell.StyleDefault.Foreground(sepFg).Background(bg)
+	bgDS := color.DynamicStyle{FG: color.Solid(fg), BG: color.Solid(bg)}
+	sepDS := color.DynamicStyle{FG: color.Solid(sepFg), BG: color.Solid(bg)}
 
 	contentY := s.Rect.Y
 	if s.ShowSeparator {
 		// Row 0: Separator line
 		for x := 0; x < s.Rect.W; x++ {
-			p.SetCell(s.Rect.X+x, s.Rect.Y, '─', sepStyle)
+			p.SetDynamicCell(s.Rect.X+x, s.Rect.Y, '─', sepDS)
 		}
 		contentY++
 	}
 	for x := 0; x < s.Rect.W; x++ {
-		p.SetCell(s.Rect.X+x, contentY, ' ', bgStyle)
+		p.SetDynamicCell(s.Rect.X+x, contentY, ' ', bgDS)
 	}
 
 	s.mu.Lock()
@@ -402,8 +403,8 @@ func (s *StatusBar) Draw(p *core.Painter) {
 			if hintFg == tcell.ColorDefault {
 				hintFg = tcell.ColorGray
 			}
-			hintStyle := tcell.StyleDefault.Foreground(hintFg).Background(bg)
-			p.DrawText(s.Rect.X+1, contentY, leftText, hintStyle)
+			hintDS := color.DynamicStyle{FG: color.Solid(hintFg), BG: color.Solid(bg)}
+			p.DrawDynamicText(s.Rect.X+1, contentY, leftText, hintDS)
 		}
 	}
 
@@ -422,7 +423,7 @@ func (s *StatusBar) Draw(p *core.Painter) {
 	}
 
 	if rightRunes := []rune(rightText); len(rightRunes) > 0 {
-		msgStyle := s.getMessageStyle(rightLevel, bg)
+		msgDS := s.getMessageDynamicStyle(rightLevel, bg)
 
 		// Calculate right-aligned position
 		rightX := s.Rect.X + s.Rect.W - len(rightRunes) - 1
@@ -441,13 +442,13 @@ func (s *StatusBar) Draw(p *core.Painter) {
 		}
 
 		if rightText != "" {
-			p.DrawText(rightX, contentY, rightText, msgStyle)
+			p.DrawDynamicText(rightX, contentY, rightText, msgDS)
 		}
 	}
 }
 
-// getMessageStyle returns the style for a message based on its level.
-func (s *StatusBar) getMessageStyle(level MessageLevel, bg tcell.Color) tcell.Style {
+// getMessageDynamicStyle returns the DynamicStyle for a message based on its level.
+func (s *StatusBar) getMessageDynamicStyle(level MessageLevel, bg tcell.Color) color.DynamicStyle {
 	tm := theme.Get()
 
 	var fg tcell.Color
@@ -471,7 +472,7 @@ func (s *StatusBar) getMessageStyle(level MessageLevel, bg tcell.Color) tcell.St
 		fg = tm.GetSemanticColor("text.primary")
 	}
 
-	return tcell.StyleDefault.Foreground(fg).Background(bg)
+	return color.DynamicStyle{FG: color.Solid(fg), BG: color.Solid(bg)}
 }
 
 // SetInvalidator implements core.InvalidationAware.

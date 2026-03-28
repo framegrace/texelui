@@ -230,8 +230,8 @@ func TestDualTextAreasClickFocusAndType(t *testing.T) {
 
 	// Check border highlight colors:
 	// Left border top-left corner is at (0,0), right border top-left at (10,0)
-	lfg, _, _ := lb.FocusedStyle.Decompose()
-	rfg, _, _ := rb.FocusedStyle.Decompose()
+	lfg := lb.FocusedStyle.FG.Resolve(color.ColorContext{})
+	rfg := rb.FocusedStyle.FG.Resolve(color.ColorContext{})
 	// Left is focused now; its corner should use FocusedStyle FG
 	if gotFG, _, _ := buf[0][0].Style.Decompose(); gotFG != lfg {
 		t.Fatalf("left border FG not focused; got %v want %v", gotFG, lfg)

@@ -4,9 +4,10 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/framegrace/texelui/theme"
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/scroll"
+	"github.com/framegrace/texelui/theme"
 )
 
 // TextArea is a multiline text editor with internal scrolling.
@@ -14,8 +15,8 @@ import (
 // that handles scrolling of the text content.
 type TextArea struct {
 	core.BaseWidget
-	Style      tcell.Style
-	CaretStyle tcell.Style
+	Style      color.DynamicStyle
+	CaretStyle color.DynamicStyle
 
 	// Optional change callback - called when text content changes
 	OnChange func(text string)
@@ -60,8 +61,13 @@ func NewTextArea() *TextArea {
 	caret := tm.GetSemanticColor("caret")
 
 	ta := &TextArea{
-		Style:      tcell.StyleDefault.Background(bg).Foreground(fg),
-		CaretStyle: tcell.StyleDefault.Foreground(caret),
+		Style: color.DynamicStyle{
+			FG: color.Solid(fg),
+			BG: color.Solid(bg),
+		},
+		CaretStyle: color.DynamicStyle{
+			FG: color.Solid(caret),
+		},
 	}
 
 	// Create internal content
@@ -263,14 +269,13 @@ func (t *TextArea) updateContentSize() {
 // ============================================================================
 
 func (c *textAreaContent) Draw(p *core.Painter) {
-	base := c.parent.Style
+	ds := c.parent.Style
 	if c.parent.IsFocused() {
-		// Use parent's EffectiveStyle since parent holds the focus, not content
-		base = c.parent.EffectiveStyle(c.parent.Style)
+		ds.Attrs |= tcell.AttrBold
 	}
 
 	// Fill background
-	p.Fill(c.Rect, ' ', base)
+	p.FillDynamic(c.Rect, ' ', ds)
 
 	textWidth := c.wrapWidth
 	if textWidth <= 0 {
@@ -293,7 +298,7 @@ func (c *textAreaContent) Draw(p *core.Painter) {
 			row := globalRow
 			col := 0
 			for i := start; i < end && col < textWidth; i++ {
-				p.SetCell(c.Rect.X+col, c.Rect.Y+row, r[i], base)
+				p.SetDynamicCell(c.Rect.X+col, c.Rect.Y+row, r[i], ds)
 				col++
 			}
 			globalRow++
@@ -311,14 +316,23 @@ func (c *textAreaContent) Draw(p *core.Painter) {
 					ch = line[c.CaretX]
 				}
 			}
-			fg, bg, _ := base.Decompose()
-			var caretStyle tcell.Style
+			ctx := color.ColorContext{}
+			fg := ds.FG.Resolve(ctx)
+			bg := ds.BG.Resolve(ctx)
+			var caretDS color.DynamicStyle
 			if c.replaceMode {
-				caretStyle = tcell.StyleDefault.Background(bg).Foreground(fg).Underline(true)
+				caretDS = color.DynamicStyle{
+					FG:    color.Solid(fg),
+					BG:    color.Solid(bg),
+					Attrs: tcell.AttrUnderline,
+				}
 			} else {
-				caretStyle = tcell.StyleDefault.Background(fg).Foreground(bg)
+				caretDS = color.DynamicStyle{
+					FG: color.Solid(bg),
+					BG: color.Solid(fg),
+				}
 			}
-			p.SetCell(c.Rect.X+cx, c.Rect.Y+cy, ch, caretStyle)
+			p.SetDynamicCell(c.Rect.X+cx, c.Rect.Y+cy, ch, caretDS)
 		}
 	}
 }
