@@ -132,8 +132,11 @@ func NewColorPicker(config ColorPickerConfig) *ColorPicker {
 		tabItems = append(tabItems, primitives.TabItem{Label: ColorModeOKLCH.String(), ID: "oklch"})
 	}
 
-	// Create tab bar
+	// Create tab bar — compact mode (no blend row) since it sits on the border
 	cp.tabBar = primitives.NewTabBar(0, 0, 40, tabItems)
+	cp.tabBar.Style.NoBlendRow = true
+	// Bar background matches content surface so tabs replace the border cleanly
+	cp.tabBar.Style.BarBG = theme.Get().GetSemanticColor("bg.surface")
 	cp.tabBar.OnChange = func(idx int) {
 		if idx >= 0 && idx < len(cp.modeOrder) {
 			cp.selectModeByIndex(idx)
@@ -379,7 +382,7 @@ func (cp *ColorPicker) drawExpanded(painter *core.Painter) {
 	if cp.tabBar != nil {
 		tabBarFocused := cp.focus == focusTabBar
 		cp.tabBar.SetPosition(cp.Rect.X+1, cp.Rect.Y)
-		cp.tabBar.Resize(cp.Rect.W-2, 1)
+		cp.tabBar.Resize(cp.Rect.W-2, cp.tabBar.TabBarHeight())
 		if tabBarFocused {
 			cp.tabBar.Focus()
 		} else {
