@@ -44,6 +44,9 @@ type textAreaContent struct {
 	clip string
 	// insert vs replace mode: false=insert (default), true=replace (overwrite)
 	replaceMode bool
+	// editing: when false, Up/Down pass through for focus cycling.
+	// Enter activates editing, Escape deactivates.
+	editing bool
 	// Width used for wrapping calculations
 	wrapWidth int
 }
@@ -122,9 +125,15 @@ func (t *TextArea) Resize(w, h int) {
 
 // GetKeyHints implements core.KeyHintsProvider.
 func (t *TextArea) GetKeyHints() []core.KeyHint {
+	if t.content.editing {
+		return []core.KeyHint{
+			{Key: "↑↓←→", Label: "Move"},
+			{Key: "Esc", Label: "Exit edit"},
+		}
+	}
 	return []core.KeyHint{
-		{Key: "↑↓←→", Label: "Move"},
-		{Key: "Ins", Label: "Mode"},
+		{Key: "Enter", Label: "Edit"},
+		{Key: "↑↓", Label: "Navigate"},
 	}
 }
 
@@ -143,6 +152,7 @@ func (t *TextArea) Focus() {
 func (t *TextArea) Blur() {
 	wasFocused := t.IsFocused()
 	t.BaseWidget.Blur()
+	t.content.editing = false
 	// Note: content inherits focus from parent, no need to blur it separately
 	if wasFocused {
 		t.invalidate()
@@ -320,9 +330,30 @@ func (c *textAreaContent) HandleKey(ev *tcell.EventKey) bool {
 		return false
 	}
 
-	// ESC not handled
+	// Escape exits edit mode
 	if ev.Key() == tcell.KeyEsc {
+		if c.editing {
+			c.editing = false
+			c.parent.invalidate()
+			return true
+		}
 		return false
+	}
+
+	// Enter activates edit mode when not editing
+	if ev.Key() == tcell.KeyEnter && !c.editing {
+		c.editing = true
+		c.parent.invalidate()
+		return true
+	}
+
+	// When not editing, only consume Left/Right/Home/End for horizontal movement.
+	// Up/Down pass through for focus cycling.
+	if !c.editing {
+		switch ev.Key() {
+		case tcell.KeyUp, tcell.KeyDown:
+			return false
+		}
 	}
 
 	// Handle Ctrl key combinations

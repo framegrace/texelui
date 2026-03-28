@@ -91,13 +91,15 @@ func (cb *ComboBox) GetKeyHints() []core.KeyHint {
 	}
 	if cb.Editable {
 		return []core.KeyHint{
-			{Key: "↑↓", Label: "Open"},
+			{Key: "Enter", Label: "Open"},
 			{Key: "Tab", Label: "Complete"},
 			{Key: "←→", Label: "Move"},
+			{Key: "↑↓", Label: "Navigate"},
 		}
 	}
 	return []core.KeyHint{
-		{Key: "↑↓/Space", Label: "Open"},
+		{Key: "Enter", Label: "Open"},
+		{Key: "↑↓", Label: "Navigate"},
 	}
 }
 
@@ -400,17 +402,25 @@ func (cb *ComboBox) HandleKey(ev *tcell.EventKey) bool {
 			if cb.OnChange != nil {
 				cb.OnChange(cb.Text)
 			}
-		} else if !cb.expanded && cb.Editable {
-			// Editable: Accept autocomplete or current value
-			autocomplete := cb.autocompleteMatch()
-			if autocomplete != "" && len(autocomplete) > len(cb.Text) {
-				cb.Text = autocomplete
-				cb.cursorPos = len(cb.Text)
-				cb.updateFilter()
-				cb.invalidate()
-				if cb.OnChange != nil {
-					cb.OnChange(cb.Text)
+		} else if !cb.expanded {
+			if cb.Editable {
+				// Editable: Accept autocomplete or open dropdown
+				autocomplete := cb.autocompleteMatch()
+				if autocomplete != "" && len(autocomplete) > len(cb.Text) {
+					cb.Text = autocomplete
+					cb.cursorPos = len(cb.Text)
+					cb.updateFilter()
+					cb.invalidate()
+					if cb.OnChange != nil {
+						cb.OnChange(cb.Text)
+					}
 				}
+			}
+			// Open dropdown on Enter when closed
+			if len(cb.filtered) > 0 {
+				cb.expanded = true
+				cb.selectCurrentValue()
+				cb.invalidate()
 			}
 		}
 		// Return true to signal handled; UIManager advances focus if AdvanceFocusOnEnter is set
@@ -450,13 +460,9 @@ func (cb *ComboBox) HandleKey(ev *tcell.EventKey) bool {
 				cb.invalidate()
 			}
 			return true
-		} else if len(cb.filtered) > 0 {
-			// Open dropdown and preselect current value
-			cb.expanded = true
-			cb.selectCurrentValue()
-			cb.invalidate()
-			return true
 		}
+		// When closed, don't consume Up/Down — let UIManager use them for focus cycling.
+		// User opens the dropdown with Enter instead.
 		return false
 
 	case tcell.KeyHome:

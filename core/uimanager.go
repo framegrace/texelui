@@ -467,9 +467,11 @@ func (u *UIManager) HandleKey(ev *tcell.EventKey) bool {
 		return true
 	}
 
-	// Tab/Shift-Tab: delegate to root container's focus cycling
-	if ev.Key() == tcell.KeyTab || ev.Key() == tcell.KeyBacktab {
-		forward := ev.Key() == tcell.KeyTab && ev.Modifiers()&tcell.ModShift == 0
+	// Tab/Shift-Tab and Up/Down: delegate to root container's focus cycling.
+	// Up/Down act as focus cyclers when the focused widget didn't handle them.
+	if ev.Key() == tcell.KeyTab || ev.Key() == tcell.KeyBacktab ||
+		ev.Key() == tcell.KeyUp || ev.Key() == tcell.KeyDown {
+		forward := ev.Key() == tcell.KeyTab || ev.Key() == tcell.KeyDown
 		// Find the root container that should handle focus cycling
 		if u.cycleFocusLocked(forward) {
 			u.dirtyMu.Lock()
