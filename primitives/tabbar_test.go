@@ -3,6 +3,7 @@ package primitives
 import (
 	"testing"
 
+	"github.com/framegrace/texelui/core"
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -25,8 +26,8 @@ func TestTabBar_NewTabBar(t *testing.T) {
 	}
 
 	w, h := tb.Size()
-	if w != 40 || h != 1 {
-		t.Errorf("expected size (40,1), got (%d,%d)", w, h)
+	if w != 40 || h != 2 {
+		t.Errorf("expected size (40,2), got (%d,%d)", w, h)
 	}
 
 	if tb.ActiveIdx != 0 {
@@ -35,6 +36,36 @@ func TestTabBar_NewTabBar(t *testing.T) {
 
 	if !tb.Focusable() {
 		t.Error("expected TabBar to be focusable")
+	}
+}
+
+func TestTabBar_TabBarHeight(t *testing.T) {
+	tabs := []TabItem{{Label: "A"}}
+
+	// Default: blend row enabled, height = 2
+	tb := NewTabBar(0, 0, 20, tabs)
+	if h := tb.TabBarHeight(); h != 2 {
+		t.Errorf("expected default TabBarHeight 2, got %d", h)
+	}
+	_, sh := tb.Size()
+	if sh != 2 {
+		t.Errorf("expected Size height 2, got %d", sh)
+	}
+
+	// NoBlendRow: height = 1
+	tb2 := &TabBar{
+		Tabs:     tabs,
+		Style:    TabBarStyle{NoBlendRow: true},
+		hoverIdx: -1,
+	}
+	tb2.SetPosition(0, 0)
+	tb2.Resize(20, tb2.TabBarHeight())
+	if h := tb2.TabBarHeight(); h != 1 {
+		t.Errorf("expected NoBlendRow TabBarHeight 1, got %d", h)
+	}
+	_, sh = tb2.Size()
+	if sh != 1 {
+		t.Errorf("expected NoBlendRow Size height 1, got %d", sh)
 	}
 }
 
@@ -218,6 +249,151 @@ func TestTabBar_HandleKey_NumberKeys(t *testing.T) {
 	handled = tb.HandleKey(ev)
 	if handled {
 		t.Error("expected pressing current tab number to not handle")
+	}
+}
+
+// makeBuf creates a rows x cols Cell buffer for testing Draw output.
+func makeBuf(cols, rows int) [][]core.Cell {
+	buf := make([][]core.Cell, rows)
+	for r := range buf {
+		buf[r] = make([]core.Cell, cols)
+	}
+	return buf
+}
+
+func TestTabBar_Draw_Powerline(t *testing.T) {
+	tabs := []TabItem{
+		{Label: "Alpha"},
+		{Label: "Beta"},
+	}
+	tb := NewTabBar(0, 0, 40, tabs)
+	// ActiveIdx defaults to 0 (Alpha is active)
+
+	buf := makeBuf(40, 2)
+	p := core.NewPainter(buf, core.Rect{X: 0, Y: 0, W: 40, H: 2})
+	tb.Draw(p)
+
+	// Col 0: leading left triangle
+	if buf[0][0].Ch != plLeftTriangle {
+		t.Errorf("expected left triangle at (0,0), got %c (U+%04X)", buf[0][0].Ch, buf[0][0].Ch)
+	}
+
+	// Col 1-7: " Alpha " (7 chars)
+	label := " Alpha "
+	for i, ch := range label {
+		if buf[0][1+i].Ch != ch {
+			t.Errorf("expected %c at col %d, got %c", ch, 1+i, buf[0][1+i].Ch)
+		}
+	}
+
+	// Col 8: separator (right triangle leaving active tab)
+	if buf[0][8].Ch != plRightTriangle {
+		t.Errorf("expected right triangle separator at col 8, got %c (U+%04X)", buf[0][8].Ch, buf[0][8].Ch)
+	}
+
+	// Col 9-14: " Beta " (6 chars)
+	label2 := " Beta "
+	for i, ch := range label2 {
+		if buf[0][9+i].Ch != ch {
+			t.Errorf("expected %c at col %d, got %c", ch, 9+i, buf[0][9+i].Ch)
+		}
+	}
+
+	// Col 15: trailing right triangle
+	if buf[0][15].Ch != plRightTriangle {
+		t.Errorf("expected trailing right triangle at col 15, got %c (U+%04X)", buf[0][15].Ch, buf[0][15].Ch)
+	}
+}
+
+func TestTabBar_Draw_BlendRow(t *testing.T) {
+	tabs := []TabItem{{Label: "Tab"}}
+	tb := NewTabBar(0, 0, 20, tabs)
+
+	buf := makeBuf(20, 2)
+	p := core.NewPainter(buf, core.Rect{X: 0, Y: 0, W: 20, H: 2})
+	tb.Draw(p)
+
+	// Row 1 should be all blend chars across full width
+	for x := 0; x < 20; x++ {
+		if buf[1][x].Ch != blendChar {
+			t.Errorf("expected blend char at (1,%d), got %c (U+%04X)", x, buf[1][x].Ch, buf[1][x].Ch)
+		}
+	}
+}
+
+func TestTabBar_Draw_SingleTab(t *testing.T) {
+	tabs := []TabItem{{Label: "Solo"}}
+	tb := NewTabBar(0, 0, 20, tabs)
+
+	buf := makeBuf(20, 2)
+	p := core.NewPainter(buf, core.Rect{X: 0, Y: 0, W: 20, H: 2})
+	tb.Draw(p)
+
+	// Expected: leftTriangle + " Solo " + rightTriangle + bar fill
+	if buf[0][0].Ch != plLeftTriangle {
+		t.Errorf("expected left triangle at col 0, got %c", buf[0][0].Ch)
+	}
+
+	label := " Solo "
+	for i, ch := range label {
+		if buf[0][1+i].Ch != ch {
+			t.Errorf("expected %c at col %d, got %c", ch, 1+i, buf[0][1+i].Ch)
+		}
+	}
+
+	// Col 7: trailing right triangle
+	if buf[0][7].Ch != plRightTriangle {
+		t.Errorf("expected right triangle at col 7, got %c (U+%04X)", buf[0][7].Ch, buf[0][7].Ch)
+	}
+
+	// Rest should be bar fill (spaces)
+	for x := 8; x < 20; x++ {
+		if buf[0][x].Ch != ' ' {
+			t.Errorf("expected space at col %d, got %c", x, buf[0][x].Ch)
+		}
+	}
+}
+
+func TestTabBar_TabAtX_Powerline(t *testing.T) {
+	// Tabs: "AB" (4 chars), "CD" (4 chars), "EF" (4 chars)
+	// Layout: [leftTri][" AB "][sep][" CD "][sep][" EF "][rightTri]
+	// Col:     0        1234   5    6789   10   11-14   15
+	tabs := []TabItem{
+		{Label: "AB"},
+		{Label: "CD"},
+		{Label: "EF"},
+	}
+	tb := NewTabBar(0, 0, 30, tabs)
+
+	tests := []struct {
+		x    int
+		want int
+	}{
+		{0, -1}, // left triangle
+		{1, 0},  // " AB " start
+		{2, 0},  // "A"
+		{3, 0},  // "B"
+		{4, 0},  // " AB " trailing space
+		{5, -1}, // separator
+		{6, 1},  // " CD " start
+		{7, 1},
+		{8, 1},
+		{9, 1},   // " CD " trailing space
+		{10, -1}, // separator
+		{11, 2},  // " EF " start
+		{12, 2},
+		{13, 2},
+		{14, 2},  // " EF " trailing space
+		{15, -1}, // trailing right triangle
+		{16, -1}, // bar fill
+		{20, -1}, // well past end
+	}
+
+	for _, tt := range tests {
+		got := tb.tabAtX(tt.x)
+		if got != tt.want {
+			t.Errorf("tabAtX(%d) = %d, want %d", tt.x, got, tt.want)
+		}
 	}
 }
 

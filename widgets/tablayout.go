@@ -45,6 +45,11 @@ func NewTabLayout(tabs []primitives.TabItem) *TabLayout {
 		tl.invalidate()
 	}
 
+	// Wire up Up/Down focus cycling from tab bar
+	tl.tabBar.OnFocusExit = func(forward bool) {
+		tl.CycleFocus(forward)
+	}
+
 	return tl
 }
 
@@ -190,11 +195,12 @@ func (tl *TabLayout) findLastFocusable(w core.Widget) core.Widget {
 
 // contentRect returns the rectangle for the content area (below the tab bar).
 func (tl *TabLayout) contentRect() core.Rect {
+	tbH := tl.tabBar.TabBarHeight()
 	return core.Rect{
 		X: tl.Rect.X,
-		Y: tl.Rect.Y + 1, // Tab bar is 1 row
+		Y: tl.Rect.Y + tbH,
 		W: tl.Rect.W,
-		H: tl.Rect.H - 1,
+		H: tl.Rect.H - tbH,
 	}
 }
 
@@ -202,9 +208,9 @@ func (tl *TabLayout) contentRect() core.Rect {
 func (tl *TabLayout) Resize(w, h int) {
 	tl.BaseWidget.Resize(w, h)
 
-	// Resize tab bar (always 1 row at top)
+	// Resize tab bar (2 rows with blend, 1 without)
 	tl.tabBar.SetPosition(tl.Rect.X, tl.Rect.Y)
-	tl.tabBar.Resize(w, 1)
+	tl.tabBar.Resize(w, tl.tabBar.TabBarHeight())
 
 	// Resize all children to content area
 	cr := tl.contentRect()
@@ -514,21 +520,17 @@ func (tl *TabLayout) GetKeyHints() []core.KeyHint {
 		return []core.KeyHint{
 			{Key: "←→", Label: "Switch"},
 			{Key: "1-9", Label: "Jump"},
-			{Key: "Tab", Label: "Content"},
-			{Key: "S-Tab", Label: "Exit"},
+			{Key: "↓", Label: "Content"},
 		}
 	}
 	// Content focused - delegate to content widget if it provides hints
 	activeChild := tl.activeChild()
 	if activeChild != nil {
 		if khp, ok := activeChild.(core.KeyHintsProvider); ok {
-			// Get content hints and add S-Tab for returning to tab bar
-			hints := khp.GetKeyHints()
-			hints = append(hints, core.KeyHint{Key: "S-Tab", Label: "Tab Bar"})
-			return hints
+			return khp.GetKeyHints()
 		}
 	}
 	return []core.KeyHint{
-		{Key: "S-Tab", Label: "Tab Bar"},
+		{Key: "↑↓", Label: "Navigate"},
 	}
 }

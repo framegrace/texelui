@@ -370,6 +370,62 @@ func TestUIManagerModalWidgetEnter(t *testing.T) {
 	}
 }
 
+// TestUIManager_UpDownCycleFocus tests that Up/Down keys cycle focus when the focused
+// widget doesn't consume them (same behavior as Tab/Shift-Tab).
+func TestUIManager_UpDownCycleFocus(t *testing.T) {
+	ui := core.NewUIManager()
+	ui.Resize(80, 24)
+	ui.AdvanceFocusOnEnter = false // Disable to avoid side effects
+
+	// Create three simple focusable widgets (Input doesn't implement HandleKey,
+	// so Up/Down will not be consumed and UIManager uses them for focus cycling).
+	w1 := widgets.NewInput()
+	w1.SetPosition(0, 0)
+	w1.Resize(20, 1)
+	ui.AddWidget(w1)
+
+	w2 := widgets.NewInput()
+	w2.SetPosition(0, 2)
+	w2.Resize(20, 1)
+	ui.AddWidget(w2)
+
+	w3 := widgets.NewInput()
+	w3.SetPosition(0, 4)
+	w3.Resize(20, 1)
+	ui.AddWidget(w3)
+
+	ui.Focus(w1)
+	if !w1.IsFocused() {
+		t.Fatal("expected w1 to be focused initially")
+	}
+
+	// Down should move focus to next widget
+	downEv := tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)
+	ui.HandleKey(downEv)
+	if !w2.IsFocused() {
+		t.Error("expected w2 to be focused after Down")
+	}
+
+	// Another Down should move to w3
+	ui.HandleKey(downEv)
+	if !w3.IsFocused() {
+		t.Error("expected w3 to be focused after second Down")
+	}
+
+	// Up should move focus back to w2
+	upEv := tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone)
+	ui.HandleKey(upEv)
+	if !w2.IsFocused() {
+		t.Error("expected w2 to be focused after Up")
+	}
+
+	// Up again should go back to w1
+	ui.HandleKey(upEv)
+	if !w1.IsFocused() {
+		t.Error("expected w1 to be focused after second Up")
+	}
+}
+
 // TestUIManagerEnterWithAdvanceFocusOnEnter tests AdvanceFocusOnEnter skips modal widgets
 func TestUIManagerEnterWithAdvanceFocusOnEnter(t *testing.T) {
 	ui := core.NewUIManager()

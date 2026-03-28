@@ -67,8 +67,7 @@ func (i *Input) SetInvalidator(fn func(core.Rect)) { i.inv = fn }
 func (i *Input) GetKeyHints() []core.KeyHint {
 	return []core.KeyHint{
 		{Key: "←→", Label: "Move"},
-		{Key: "Home/End", Label: "Jump"},
-		{Key: "Ins", Label: "Mode"},
+		{Key: "↑↓", Label: "Navigate"},
 	}
 }
 

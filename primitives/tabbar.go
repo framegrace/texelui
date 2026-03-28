@@ -7,10 +7,31 @@
 package primitives
 
 import (
-	"github.com/gdamore/tcell/v2"
-	"github.com/framegrace/texelui/theme"
 	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/theme"
+	"github.com/gdamore/tcell/v2"
 )
+
+// Powerline separator characters (Nerd Font Private Use Area).
+const (
+	plLeftTriangle  = '\ue0ba'
+	plRightTriangle = '\ue0b8'
+	plLeftThinLine  = '\ue0bb'
+	plRightThinLine = '\ue0b9'
+	blendChar       = '\u2580' // Upper half block
+)
+
+// TabBarStyle controls the colors used by the tab bar.
+// Zero-value fields are resolved from the theme at draw time.
+type TabBarStyle struct {
+	ActiveBG   tcell.Color
+	ActiveFG   tcell.Color
+	InactiveBG tcell.Color
+	InactiveFG tcell.Color
+	BarBG      tcell.Color
+	ContentBG  tcell.Color
+	NoBlendRow bool
+}
 
 // TabItem represents a single tab in a TabBar.
 type TabItem struct {
@@ -27,7 +48,12 @@ type TabBar struct {
 	OnChange  func(int) // Called when active tab changes
 
 	// Styling
+	Style           TabBarStyle
 	ShowFocusMarker bool // Show '►' marker when focused (default true)
+
+	// Focus navigation callback — called when Up/Down should cycle focus
+	// out of the tab bar. Set by TabLayout to wire into CycleFocus.
+	OnFocusExit func(forward bool)
 
 	// Mouse hover state
 	hoverIdx int // Index of tab under mouse cursor (-1 if none)
@@ -35,8 +61,18 @@ type TabBar struct {
 	inv func(core.Rect)
 }
 
+// TabBarHeight returns the height needed by the tab bar.
+// Returns 2 when the blend row is enabled (default), 1 otherwise.
+func (tb *TabBar) TabBarHeight() int {
+	if tb.Style.NoBlendRow {
+		return 1
+	}
+	return 2
+}
+
 // NewTabBar creates a new tab bar at the specified position.
-// Width determines the available space for tabs. Height is always 1.
+// Width determines the available space for tabs. Height is 2 by default
+// (1 tab row + 1 blend row), or 1 if Style.NoBlendRow is set.
 func NewTabBar(x, y, w int, tabs []TabItem) *TabBar {
 	tb := &TabBar{
 		Tabs:            tabs,
@@ -46,7 +82,7 @@ func NewTabBar(x, y, w int, tabs []TabItem) *TabBar {
 	}
 
 	tb.SetPosition(x, y)
-	tb.Resize(w, 1)
+	tb.Resize(w, tb.TabBarHeight())
 	tb.SetFocusable(true)
 
 	// Configure focus style from theme
@@ -86,64 +122,127 @@ func (tb *TabBar) ActiveTab() TabItem {
 	return TabItem{}
 }
 
-// Draw renders the tab bar.
+// resolveColors returns TabBarStyle with zero-value colors resolved from theme.
+func (tb *TabBar) resolveColors() TabBarStyle {
+	s := tb.Style
+	tm := theme.Get()
+	if s.ActiveBG == 0 {
+		s.ActiveBG = tm.GetSemanticColor("accent")
+	}
+	if s.ActiveFG == 0 {
+		s.ActiveFG = tm.GetSemanticColor("text.inverse")
+	}
+	if s.InactiveBG == 0 {
+		s.InactiveBG = tm.GetSemanticColor("bg.surface")
+	}
+	if s.InactiveFG == 0 {
+		s.InactiveFG = tm.GetSemanticColor("text.muted")
+	}
+	if s.BarBG == 0 {
+		s.BarBG = tm.GetSemanticColor("bg.mantle")
+	}
+	if s.ContentBG == 0 {
+		s.ContentBG = tm.GetSemanticColor("bg.surface")
+	}
+	return s
+}
+
+// Draw renders the tab bar with powerline-style separators.
 func (tb *TabBar) Draw(painter *core.Painter) {
 	if len(tb.Tabs) == 0 {
 		return
 	}
 
-	tm := theme.Get()
-	fg := tm.GetSemanticColor("text.primary")
-	bg := tm.GetSemanticColor("bg.surface")
-	accent := tm.GetSemanticColor("accent")
-	baseStyle := tcell.StyleDefault.Foreground(fg).Background(bg)
-	// Active tab: accent background with contrasting foreground
-	activeStyle := tcell.StyleDefault.Foreground(bg).Background(accent)
-
+	s := tb.resolveColors()
 	focused := tb.IsFocused()
 	x := tb.Rect.X
 	y := tb.Rect.Y
+	maxX := tb.Rect.X + tb.Rect.W
 
-	// Draw focus marker if focused and enabled
-	if focused && tb.ShowFocusMarker {
-		painter.SetCell(x, y, '►', baseStyle.Bold(true))
+	tm := theme.Get()
+	activeStyle := tcell.StyleDefault.Foreground(s.ActiveFG).Background(s.ActiveBG)
+	// Inactive tabs: normal text when bar unfocused, accent FG when bar focused
+	inactiveFG := tm.GetSemanticColor("text.primary")
+	if focused {
+		inactiveFG = s.ActiveBG // accent color
+	}
+	inactiveStyle := tcell.StyleDefault.Foreground(inactiveFG).Background(s.InactiveBG)
+	barStyle := tcell.StyleDefault.Foreground(s.BarBG).Background(s.BarBG)
+
+	// Row 0: powerline tab row
+	// Leading left triangle: FG = first tab's BG, BG = barBG
+	firstBG := s.InactiveBG
+	if tb.ActiveIdx == 0 {
+		firstBG = s.ActiveBG
+	}
+	if x < maxX {
+		painter.SetCell(x, y, plLeftTriangle, tcell.StyleDefault.Foreground(firstBG).Background(s.BarBG))
 		x++
 	}
 
-	// Draw each tab
 	for i, tab := range tb.Tabs {
 		tabLabel := " " + tab.Label + " "
 		isActive := i == tb.ActiveIdx
 		isHover := i == tb.hoverIdx && !isActive
 
-		tabStyle := baseStyle
+		tabStyle := inactiveStyle
 		if isActive {
-			// Active tab: accent background
 			tabStyle = activeStyle
 			if focused {
 				tabStyle = tabStyle.Bold(true)
 			}
 		} else if isHover {
-			// Hover (mouse only): reverse
-			tabStyle = baseStyle.Reverse(true)
-		} else if focused {
-			// Inactive tabs when focused: dim
-			tabStyle = tabStyle.Dim(true)
+			tabStyle = inactiveStyle.Reverse(true)
 		}
 
-		// Draw tab label
+		// Draw tab label characters
 		for _, ch := range tabLabel {
-			if x >= tb.Rect.X+tb.Rect.W {
+			if x >= maxX {
 				break
 			}
 			painter.SetCell(x, y, ch, tabStyle)
 			x++
 		}
 
-		// Add spacing between tabs (unless at end)
-		if i < len(tb.Tabs)-1 && x < tb.Rect.X+tb.Rect.W {
-			painter.SetCell(x, y, ' ', baseStyle)
+		// Draw separator between tabs (not after the last tab)
+		if i < len(tb.Tabs)-1 && x < maxX {
+			nextActive := (i + 1) == tb.ActiveIdx
+			if isActive {
+				// Leaving active tab: right triangle, FG=active, BG=next tab's BG
+				nextBG := s.InactiveBG
+				painter.SetCell(x, y, plRightTriangle, tcell.StyleDefault.Foreground(s.ActiveBG).Background(nextBG))
+			} else if nextActive {
+				// Entering active tab: left triangle, FG=active, BG=current tab's BG
+				painter.SetCell(x, y, plLeftTriangle, tcell.StyleDefault.Foreground(s.ActiveBG).Background(s.InactiveBG))
+			} else {
+				// Between two inactive tabs: thin line separator
+				painter.SetCell(x, y, plRightThinLine, tcell.StyleDefault.Foreground(s.BarBG).Background(s.InactiveBG))
+			}
 			x++
+		}
+	}
+
+	// Trailing right triangle after last tab: FG = last tab's BG, BG = barBG
+	if x < maxX {
+		lastBG := s.InactiveBG
+		if tb.ActiveIdx == len(tb.Tabs)-1 {
+			lastBG = s.ActiveBG
+		}
+		painter.SetCell(x, y, plRightTriangle, tcell.StyleDefault.Foreground(lastBG).Background(s.BarBG))
+		x++
+	}
+
+	// Fill rest of row 0 with bar background
+	for x < maxX {
+		painter.SetCell(x, y, ' ', barStyle)
+		x++
+	}
+
+	// Row 1: blend row (if enabled)
+	if !tb.Style.NoBlendRow && tb.Rect.H >= 2 {
+		blendStyle := tcell.StyleDefault.Foreground(s.ActiveBG).Background(s.ContentBG)
+		for bx := tb.Rect.X; bx < maxX; bx++ {
+			painter.SetCell(bx, y+1, blendChar, blendStyle)
 		}
 	}
 }
@@ -239,26 +338,34 @@ func (tb *TabBar) HandleMouse(ev *tcell.EventMouse) bool {
 }
 
 // tabAtX returns the tab index at the given x position, or -1 if none.
+// Layout: [leftTri][" Label "][sep][" Label "][sep]...[rightTri][barBG...]
 func (tb *TabBar) tabAtX(x int) int {
-	tabX := tb.Rect.X
-	focused := tb.IsFocused()
+	col := tb.Rect.X
 
-	// Account for focus marker
-	if focused && tb.ShowFocusMarker {
-		tabX++
+	// Skip leading left triangle
+	if x == col {
+		return -1
 	}
+	col++
 
 	for i, tab := range tb.Tabs {
-		tabLabel := " " + tab.Label + " "
-		tabWidth := len(tabLabel)
+		tabWidth := len(" " + tab.Label + " ")
 
-		if x >= tabX && x < tabX+tabWidth {
+		if x >= col && x < col+tabWidth {
 			return i
 		}
+		col += tabWidth
 
-		tabX += tabWidth + 1 // +1 for spacing
+		// Separator after each tab (except the last, which has trailing triangle)
+		if i < len(tb.Tabs)-1 {
+			if x == col {
+				return -1 // separator
+			}
+			col++
+		}
 	}
 
+	// Trailing right triangle or bar fill
 	return -1
 }
 
@@ -282,5 +389,6 @@ func (tb *TabBar) GetKeyHints() []core.KeyHint {
 	return []core.KeyHint{
 		{Key: "←→", Label: "Switch"},
 		{Key: "1-9", Label: "Jump"},
+		{Key: "↓", Label: "Content"},
 	}
 }
