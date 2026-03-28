@@ -118,64 +118,123 @@ func (tb *TabBar) ActiveTab() TabItem {
 	return TabItem{}
 }
 
-// Draw renders the tab bar.
+// resolveColors returns TabBarStyle with zero-value colors resolved from theme.
+func (tb *TabBar) resolveColors() TabBarStyle {
+	s := tb.Style
+	tm := theme.Get()
+	if s.ActiveBG == 0 {
+		s.ActiveBG = tm.GetSemanticColor("accent")
+	}
+	if s.ActiveFG == 0 {
+		s.ActiveFG = tm.GetSemanticColor("text.inverse")
+	}
+	if s.InactiveBG == 0 {
+		s.InactiveBG = tm.GetSemanticColor("bg.surface")
+	}
+	if s.InactiveFG == 0 {
+		s.InactiveFG = tm.GetSemanticColor("text.muted")
+	}
+	if s.BarBG == 0 {
+		s.BarBG = tm.GetSemanticColor("bg.mantle")
+	}
+	if s.ContentBG == 0 {
+		s.ContentBG = tm.GetSemanticColor("bg.surface")
+	}
+	return s
+}
+
+// Draw renders the tab bar with powerline-style separators.
 func (tb *TabBar) Draw(painter *core.Painter) {
 	if len(tb.Tabs) == 0 {
 		return
 	}
 
-	tm := theme.Get()
-	fg := tm.GetSemanticColor("text.primary")
-	bg := tm.GetSemanticColor("bg.surface")
-	accent := tm.GetSemanticColor("accent")
-	baseStyle := tcell.StyleDefault.Foreground(fg).Background(bg)
-	// Active tab: accent background with contrasting foreground
-	activeStyle := tcell.StyleDefault.Foreground(bg).Background(accent)
-
+	s := tb.resolveColors()
 	focused := tb.IsFocused()
 	x := tb.Rect.X
 	y := tb.Rect.Y
+	maxX := tb.Rect.X + tb.Rect.W
 
-	// Draw focus marker if focused and enabled
-	if focused && tb.ShowFocusMarker {
-		painter.SetCell(x, y, '►', baseStyle.Bold(true))
+	activeStyle := tcell.StyleDefault.Foreground(s.ActiveFG).Background(s.ActiveBG)
+	inactiveStyle := tcell.StyleDefault.Foreground(s.InactiveFG).Background(s.InactiveBG)
+	barStyle := tcell.StyleDefault.Foreground(s.BarBG).Background(s.BarBG)
+
+	// Row 0: powerline tab row
+	// Leading left triangle: FG = first tab's BG, BG = barBG
+	firstBG := s.InactiveBG
+	if tb.ActiveIdx == 0 {
+		firstBG = s.ActiveBG
+	}
+	if x < maxX {
+		painter.SetCell(x, y, plLeftTriangle, tcell.StyleDefault.Foreground(firstBG).Background(s.BarBG))
 		x++
 	}
 
-	// Draw each tab
 	for i, tab := range tb.Tabs {
 		tabLabel := " " + tab.Label + " "
 		isActive := i == tb.ActiveIdx
 		isHover := i == tb.hoverIdx && !isActive
 
-		tabStyle := baseStyle
+		tabStyle := inactiveStyle
 		if isActive {
-			// Active tab: accent background
 			tabStyle = activeStyle
 			if focused {
 				tabStyle = tabStyle.Bold(true)
 			}
 		} else if isHover {
-			// Hover (mouse only): reverse
-			tabStyle = baseStyle.Reverse(true)
+			tabStyle = inactiveStyle.Reverse(true)
 		} else if focused {
-			// Inactive tabs when focused: dim
-			tabStyle = tabStyle.Dim(true)
+			tabStyle = inactiveStyle.Dim(true)
 		}
 
-		// Draw tab label
+		// Draw tab label characters
 		for _, ch := range tabLabel {
-			if x >= tb.Rect.X+tb.Rect.W {
+			if x >= maxX {
 				break
 			}
 			painter.SetCell(x, y, ch, tabStyle)
 			x++
 		}
 
-		// Add spacing between tabs (unless at end)
-		if i < len(tb.Tabs)-1 && x < tb.Rect.X+tb.Rect.W {
-			painter.SetCell(x, y, ' ', baseStyle)
+		// Draw separator between tabs (not after the last tab)
+		if i < len(tb.Tabs)-1 && x < maxX {
+			nextActive := (i + 1) == tb.ActiveIdx
+			if isActive {
+				// Leaving active tab: right triangle, FG=active, BG=next tab's BG
+				nextBG := s.InactiveBG
+				painter.SetCell(x, y, plRightTriangle, tcell.StyleDefault.Foreground(s.ActiveBG).Background(nextBG))
+			} else if nextActive {
+				// Entering active tab: left triangle, FG=active, BG=current tab's BG
+				painter.SetCell(x, y, plLeftTriangle, tcell.StyleDefault.Foreground(s.ActiveBG).Background(s.InactiveBG))
+			} else {
+				// Between two inactive tabs: thin line separator
+				painter.SetCell(x, y, plRightThinLine, tcell.StyleDefault.Foreground(s.BarBG).Background(s.InactiveBG))
+			}
 			x++
+		}
+	}
+
+	// Trailing right triangle after last tab: FG = last tab's BG, BG = barBG
+	if x < maxX {
+		lastBG := s.InactiveBG
+		if tb.ActiveIdx == len(tb.Tabs)-1 {
+			lastBG = s.ActiveBG
+		}
+		painter.SetCell(x, y, plRightTriangle, tcell.StyleDefault.Foreground(lastBG).Background(s.BarBG))
+		x++
+	}
+
+	// Fill rest of row 0 with bar background
+	for x < maxX {
+		painter.SetCell(x, y, ' ', barStyle)
+		x++
+	}
+
+	// Row 1: blend row (if enabled)
+	if !tb.Style.NoBlendRow && tb.Rect.H >= 2 {
+		blendStyle := tcell.StyleDefault.Foreground(s.ActiveBG).Background(s.ContentBG)
+		for bx := tb.Rect.X; bx < maxX; bx++ {
+			painter.SetCell(bx, y+1, blendChar, blendStyle)
 		}
 	}
 }
