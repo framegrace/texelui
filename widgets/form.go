@@ -46,7 +46,7 @@ func DefaultFormConfig() FormConfig {
 // their associated field has focus.
 type Form struct {
 	core.BaseWidget
-	Style  tcell.Style
+	Style  color.DynamicStyle
 	Config FormConfig
 
 	rows           []FormRow
@@ -68,7 +68,10 @@ func NewFormWithConfig(config FormConfig) *Form {
 	fg := tm.GetSemanticColor("text.primary")
 
 	f := &Form{
-		Style:          tcell.StyleDefault.Background(bg).Foreground(fg),
+		Style: color.DynamicStyle{
+			FG: color.Solid(fg),
+			BG: color.Solid(bg),
+		},
 		Config:         config,
 		lastFocusedIdx: -1,
 	}
@@ -139,8 +142,11 @@ func (f *Form) SetInvalidator(fn func(core.Rect)) {
 
 // Draw renders the form with all rows.
 func (f *Form) Draw(painter *core.Painter) {
-	style := f.EffectiveStyle(f.Style)
-	painter.Fill(f.Rect, ' ', style)
+	ds := f.Style
+	if f.IsFocused() {
+		ds.Attrs |= tcell.AttrBold
+	}
+	painter.FillDynamic(f.Rect, ' ', ds)
 
 	// Collect all widgets with their draw order
 	type drawItem struct {

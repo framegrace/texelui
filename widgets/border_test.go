@@ -3,8 +3,9 @@ package widgets
 import (
 	"testing"
 
-	"github.com/framegrace/texelui/core"
 	"github.com/gdamore/tcell/v2"
+	"github.com/framegrace/texelui/color"
+	"github.com/framegrace/texelui/core"
 )
 
 func TestBorder_BasicDraw(t *testing.T) {
@@ -168,7 +169,7 @@ func TestBorder_ResizingStyleDraw(t *testing.T) {
 	b.Resize(10, 5)
 
 	resizingFG := tcell.NewRGBColor(255, 0, 0)
-	b.ResizingStyle = tcell.StyleDefault.Foreground(resizingFG)
+	b.ResizingStyle = color.StyleFrom(tcell.StyleDefault.Foreground(resizingFG))
 	b.IsResizing = true
 
 	p := core.NewPainter(buf, core.Rect{X: 0, Y: 0, W: 10, H: 5})
