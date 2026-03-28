@@ -15,9 +15,11 @@ import (
 	"image/png"
 
 	"github.com/framegrace/texelui/adapter"
+	dyncolor "github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/scroll"
 	"github.com/framegrace/texelui/widgets"
+	"github.com/gdamore/tcell/v2"
 )
 
 // New creates a new TexelUI widget showcase demo app.
@@ -47,6 +49,9 @@ func New() core.App {
 
 	// === Scrolling Tab (dedicated scroll demo) ===
 	tabPanel.AddTab("Scrolling", createScrollingTab())
+
+	// === Gradients Tab (dynamic color pipeline demo) ===
+	tabPanel.AddTab("Gradients", createGradientsTab())
 
 	ui.AddWidget(tabPanel)
 	ui.Focus(tabPanel)
@@ -481,4 +486,118 @@ func createScrollingTab() core.Widget {
 	scrollPane.SetContentHeight(59)
 
 	return scrollPane
+}
+
+// GradientBox is a minimal widget that fills its rectangle with a DynamicStyle.
+type GradientBox struct {
+	core.BaseWidget
+	Style dyncolor.DynamicStyle
+	Label string
+}
+
+func (g *GradientBox) Draw(p *core.Painter) {
+	p.SetWidgetRect(g.Rect)
+	p.FillDynamic(g.Rect, ' ', g.Style)
+	if g.Label != "" {
+		x := g.Rect.X + (g.Rect.W-len(g.Label))/2
+		y := g.Rect.Y + g.Rect.H/2
+		labelStyle := dyncolor.DynamicStyle{
+			FG: dyncolor.Solid(tcell.ColorWhite),
+			BG: g.Style.BG,
+		}
+		p.DrawDynamicText(x, y, g.Label, labelStyle)
+	}
+}
+
+// createGradientsTab creates the Gradients tab demonstrating the dynamic color pipeline.
+func createGradientsTab() core.Widget {
+	pane := widgets.NewPane()
+
+	// Title
+	title := widgets.NewLabel("Dynamic Colors Demo")
+	title.SetPosition(2, 1)
+	pane.AddChild(title)
+
+	// 1. Horizontal gradient (red -> purple -> blue)
+	hGrad := &GradientBox{
+		Style: dyncolor.DynamicStyle{
+			BG: dyncolor.Linear(0,
+				dyncolor.Stop(0, tcell.NewRGBColor(255, 0, 0)),
+				dyncolor.Stop(0.5, tcell.NewRGBColor(128, 0, 255)),
+				dyncolor.Stop(1, tcell.NewRGBColor(0, 0, 255)),
+			).WithLocal().Build(),
+		},
+		Label: "Horizontal (0\u00b0)",
+	}
+	hGrad.SetPosition(2, 3)
+	hGrad.Resize(30, 3)
+	pane.AddChild(hGrad)
+
+	// 2. Vertical gradient (warm -> cool)
+	vGrad := &GradientBox{
+		Style: dyncolor.DynamicStyle{
+			BG: dyncolor.Linear(90,
+				dyncolor.Stop(0, tcell.NewRGBColor(255, 200, 50)),
+				dyncolor.Stop(1, tcell.NewRGBColor(50, 50, 200)),
+			).WithLocal().Build(),
+		},
+		Label: "Vertical (90\u00b0)",
+	}
+	vGrad.SetPosition(35, 3)
+	vGrad.Resize(30, 5)
+	pane.AddChild(vGrad)
+
+	// 3. Diagonal gradient
+	dGrad := &GradientBox{
+		Style: dyncolor.DynamicStyle{
+			BG: dyncolor.Linear(45,
+				dyncolor.Stop(0, tcell.NewRGBColor(0, 255, 100)),
+				dyncolor.Stop(1, tcell.NewRGBColor(255, 50, 200)),
+			).WithLocal().Build(),
+		},
+		Label: "Diagonal (45\u00b0)",
+	}
+	dGrad.SetPosition(2, 7)
+	dGrad.Resize(30, 5)
+	pane.AddChild(dGrad)
+
+	// 4. Radial gradient
+	rGrad := &GradientBox{
+		Style: dyncolor.DynamicStyle{
+			BG: dyncolor.Radial(0.5, 0.5,
+				dyncolor.Stop(0, tcell.NewRGBColor(255, 255, 200)),
+				dyncolor.Stop(1, tcell.NewRGBColor(20, 20, 80)),
+			).WithLocal().Build(),
+		},
+		Label: "Radial",
+	}
+	rGrad.SetPosition(35, 9)
+	rGrad.Resize(30, 7)
+	pane.AddChild(rGrad)
+
+	// 5. Rainbow gradient (multi-stop)
+	rainbow := &GradientBox{
+		Style: dyncolor.DynamicStyle{
+			BG: dyncolor.Linear(0,
+				dyncolor.Stop(0, tcell.NewRGBColor(255, 0, 0)),
+				dyncolor.Stop(0.17, tcell.NewRGBColor(255, 127, 0)),
+				dyncolor.Stop(0.33, tcell.NewRGBColor(255, 255, 0)),
+				dyncolor.Stop(0.5, tcell.NewRGBColor(0, 255, 0)),
+				dyncolor.Stop(0.67, tcell.NewRGBColor(0, 0, 255)),
+				dyncolor.Stop(0.83, tcell.NewRGBColor(75, 0, 130)),
+				dyncolor.Stop(1, tcell.NewRGBColor(148, 0, 211)),
+			).WithLocal().Build(),
+		},
+		Label: "Rainbow (7 stops)",
+	}
+	rainbow.SetPosition(2, 13)
+	rainbow.Resize(63, 3)
+	pane.AddChild(rainbow)
+
+	// Help text
+	help := widgets.NewLabel("Gradients interpolated in OKLCH color space for perceptual smoothness")
+	help.SetPosition(2, 17)
+	pane.AddChild(help)
+
+	return pane
 }
