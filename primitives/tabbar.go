@@ -330,26 +330,34 @@ func (tb *TabBar) HandleMouse(ev *tcell.EventMouse) bool {
 }
 
 // tabAtX returns the tab index at the given x position, or -1 if none.
+// Layout: [leftTri][" Label "][sep][" Label "][sep]...[rightTri][barBG...]
 func (tb *TabBar) tabAtX(x int) int {
-	tabX := tb.Rect.X
-	focused := tb.IsFocused()
+	col := tb.Rect.X
 
-	// Account for focus marker
-	if focused && tb.ShowFocusMarker {
-		tabX++
+	// Skip leading left triangle
+	if x == col {
+		return -1
 	}
+	col++
 
 	for i, tab := range tb.Tabs {
-		tabLabel := " " + tab.Label + " "
-		tabWidth := len(tabLabel)
+		tabWidth := len(" " + tab.Label + " ")
 
-		if x >= tabX && x < tabX+tabWidth {
+		if x >= col && x < col+tabWidth {
 			return i
 		}
+		col += tabWidth
 
-		tabX += tabWidth + 1 // +1 for spacing
+		// Separator after each tab (except the last, which has trailing triangle)
+		if i < len(tb.Tabs)-1 {
+			if x == col {
+				return -1 // separator
+			}
+			col++
+		}
 	}
 
+	// Trailing right triangle or bar fill
 	return -1
 }
 

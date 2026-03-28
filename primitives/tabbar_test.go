@@ -354,6 +354,49 @@ func TestTabBar_Draw_SingleTab(t *testing.T) {
 	}
 }
 
+func TestTabBar_TabAtX_Powerline(t *testing.T) {
+	// Tabs: "AB" (4 chars), "CD" (4 chars), "EF" (4 chars)
+	// Layout: [leftTri][" AB "][sep][" CD "][sep][" EF "][rightTri]
+	// Col:     0        1234   5    6789   10   11-14   15
+	tabs := []TabItem{
+		{Label: "AB"},
+		{Label: "CD"},
+		{Label: "EF"},
+	}
+	tb := NewTabBar(0, 0, 30, tabs)
+
+	tests := []struct {
+		x    int
+		want int
+	}{
+		{0, -1},  // left triangle
+		{1, 0},   // " AB " start
+		{2, 0},   // "A"
+		{3, 0},   // "B"
+		{4, 0},   // " AB " trailing space
+		{5, -1},  // separator
+		{6, 1},   // " CD " start
+		{7, 1},
+		{8, 1},
+		{9, 1},   // " CD " trailing space
+		{10, -1}, // separator
+		{11, 2},  // " EF " start
+		{12, 2},
+		{13, 2},
+		{14, 2},  // " EF " trailing space
+		{15, -1}, // trailing right triangle
+		{16, -1}, // bar fill
+		{20, -1}, // well past end
+	}
+
+	for _, tt := range tests {
+		got := tb.tabAtX(tt.x)
+		if got != tt.want {
+			t.Errorf("tabAtX(%d) = %d, want %d", tt.x, got, tt.want)
+		}
+	}
+}
+
 func TestTabBar_EmptyTabs(t *testing.T) {
 	tb := NewTabBar(0, 0, 30, []TabItem{})
 
