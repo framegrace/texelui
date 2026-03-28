@@ -93,7 +93,9 @@ func (p *Pane) Draw(painter *core.Painter) {
 	if p.IsFocused() {
 		ds.Attrs |= tcell.AttrBold
 	}
-	painter.FillDynamic(core.Rect{X: p.Rect.X, Y: p.Rect.Y, W: p.Rect.W, H: p.Rect.H}, ' ', ds)
+	if !p.Transparent {
+		painter.FillDynamic(core.Rect{X: p.Rect.X, Y: p.Rect.Y, W: p.Rect.W, H: p.Rect.H}, ' ', ds)
+	}
 
 	// Sort children by z-index (lower z-index drawn first, higher on top)
 	sorted := make([]core.Widget, len(p.children))

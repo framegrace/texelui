@@ -20,6 +20,7 @@ import (
 	dyncolor "github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/scroll"
+	"github.com/framegrace/texelui/theme"
 	"github.com/framegrace/texelui/widgets"
 	"github.com/gdamore/tcell/v2"
 )
@@ -40,6 +41,16 @@ func New() core.App {
 	inputsScroll := scroll.NewScrollPane()
 	inputsScroll.SetChild(inputsForm)
 	inputsScroll.SetContentHeight(inputsForm.ContentHeight())
+	// Gradient background on the scroll pane — fades from theme surface to black
+	tm := theme.Get()
+	surfaceBG := tm.GetSemanticColor("bg.surface")
+	inputsScroll.Style = dyncolor.DynamicStyle{
+		FG: dyncolor.Solid(tcell.ColorWhite),
+		BG: dyncolor.Linear(90,
+			dyncolor.Stop(0, surfaceBG),
+			dyncolor.Stop(1, tcell.NewRGBColor(0, 0, 0)),
+		).WithLocal().Build(),
+	}
 	tabPanel.AddTab("Inputs", inputsScroll)
 
 	// === Layouts Tab (uses VBox/HBox widgets) ===
@@ -91,7 +102,9 @@ func New() core.App {
 // createInputsTab creates the Inputs tab using the Form widget.
 // Demonstrates: Form, Input, ComboBox, TextArea, ColorPicker, Checkbox
 func createInputsTab() *widgets.Form {
+	startTime := time.Now()
 	form := widgets.NewForm()
+	form.Transparent = true // Let scroll pane's gradient show through
 
 	// Basic text inputs
 	nameInput := widgets.NewInput()
@@ -131,6 +144,15 @@ func createInputsTab() *widgets.Form {
 	notesArea.SetText("Line 1: This is a test\nLine 2: More content here\nLine 3: Even more text\nLine 4: Keep scrolling\nLine 5: Almost there\nLine 6: One more\nLine 7: And another\nLine 8: Last line")
 	notesBorder := widgets.NewBorder()
 	notesBorder.SetChild(notesArea)
+	// Animated rainbow border
+	notesBorder.Style = dyncolor.DynamicStyle{
+		FG: dyncolor.AnimatedFunc(func(ctx dyncolor.ColorContext) tcell.Color {
+			t := float64(time.Since(startTime).Milliseconds()) / 3000.0
+			nx := float64(ctx.X) / math.Max(float64(ctx.W-1), 1)
+			hue := math.Mod((nx+t)*360, 360)
+			return dyncolor.OKLCHToTcell(0.75, 0.15, hue)
+		}),
+	}
 	form.AddRow(widgets.FormRow{
 		Label:  widgets.NewLabel("Notes:"),
 		Field:  notesBorder,
@@ -150,6 +172,14 @@ func createInputsTab() *widgets.Form {
 	// Additional fields to make form taller (for scrolling demo)
 	websiteInput := widgets.NewInput()
 	websiteInput.Placeholder = "https://example.com"
+	// Gradient text color on this input
+	websiteInput.Style = dyncolor.DynamicStyle{
+		FG: dyncolor.Linear(0,
+			dyncolor.Stop(0, tcell.NewRGBColor(100, 200, 255)),
+			dyncolor.Stop(1, tcell.NewRGBColor(255, 100, 200)),
+		).WithLocal().Build(),
+		BG: websiteInput.Style.BG,
+	}
 	form.AddField("Website:", websiteInput)
 
 	companyInput := widgets.NewInput()
@@ -171,6 +201,14 @@ func createInputsTab() *widgets.Form {
 	form.AddFullWidthField(check2, 1)
 
 	check3 := widgets.NewCheckbox("Newsletter subscription")
+	// Breathing accent checkbox text
+	check3.Style = dyncolor.DynamicStyle{
+		FG: dyncolor.AnimatedFunc(func(ctx dyncolor.ColorContext) tcell.Color {
+			t := float64(time.Since(startTime).Milliseconds()) / 2000.0
+			lightness := 0.55 + 0.25*math.Sin(t*2*math.Pi)
+			return dyncolor.OKLCHToTcell(lightness, 0.18, 300)
+		}),
+	}
 	form.AddFullWidthField(check3, 1)
 
 	return form

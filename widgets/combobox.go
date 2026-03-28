@@ -259,9 +259,11 @@ func (cb *ComboBox) Draw(p *core.Painter) {
 
 	// Fill background (with underline when focused for input area)
 	inputWidth := cb.Rect.W - 3 // Reserve 3 chars for button " ▼ "
-	p.FillDynamic(core.Rect{X: cb.Rect.X, Y: cb.Rect.Y, W: inputWidth, H: 1}, ' ', baseDS)
-	// Fill button area without underline
-	p.FillDynamic(core.Rect{X: cb.Rect.X + inputWidth, Y: cb.Rect.Y, W: 3, H: 1}, ' ', btnDS)
+	if !cb.Transparent {
+		p.FillDynamic(core.Rect{X: cb.Rect.X, Y: cb.Rect.Y, W: inputWidth, H: 1}, ' ', baseDS)
+		// Fill button area without underline
+		p.FillDynamic(core.Rect{X: cb.Rect.X + inputWidth, Y: cb.Rect.Y, W: 3, H: 1}, ' ', btnDS)
+	}
 
 	x := cb.Rect.X
 	y := cb.Rect.Y

@@ -66,7 +66,9 @@ func (b *Button) Draw(painter *core.Painter) {
 	}
 
 	// Fill background
-	painter.FillDynamic(core.Rect{X: b.Rect.X, Y: b.Rect.Y, W: b.Rect.W, H: b.Rect.H}, ' ', ds)
+	if !b.Transparent {
+		painter.FillDynamic(core.Rect{X: b.Rect.X, Y: b.Rect.Y, W: b.Rect.W, H: b.Rect.H}, ' ', ds)
+	}
 
 	if b.Text == "" {
 		return

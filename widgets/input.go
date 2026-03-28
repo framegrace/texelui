@@ -97,7 +97,9 @@ func (i *Input) Draw(painter *core.Painter) {
 	}
 
 	// Fill background with underline when focused
-	painter.FillDynamic(core.Rect{X: i.Rect.X, Y: i.Rect.Y, W: i.Rect.W, H: 1}, ' ', ds)
+	if !i.Transparent {
+		painter.FillDynamic(core.Rect{X: i.Rect.X, Y: i.Rect.Y, W: i.Rect.W, H: 1}, ' ', ds)
+	}
 
 	// Determine what to display
 	displayText := i.Text

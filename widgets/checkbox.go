@@ -61,7 +61,9 @@ func (c *Checkbox) Draw(painter *core.Painter) {
 	}
 
 	// Fill background
-	painter.FillDynamic(core.Rect{X: c.Rect.X, Y: c.Rect.Y, W: c.Rect.W, H: 1}, ' ', ds)
+	if !c.Transparent {
+		painter.FillDynamic(core.Rect{X: c.Rect.X, Y: c.Rect.Y, W: c.Rect.W, H: 1}, ' ', ds)
+	}
 
 	// Determine checkbox character
 	var checkChar string

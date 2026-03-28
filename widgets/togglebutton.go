@@ -82,7 +82,9 @@ func (tb *ToggleButton) Draw(painter *core.Painter) {
 		BG:    color.Solid(bg),
 		Attrs: attr,
 	}
-	painter.FillDynamic(core.Rect{X: tb.Rect.X, Y: tb.Rect.Y, W: tb.Rect.W, H: 1}, ' ', resolved)
+	if !tb.Transparent {
+		painter.FillDynamic(core.Rect{X: tb.Rect.X, Y: tb.Rect.Y, W: tb.Rect.W, H: 1}, ' ', resolved)
+	}
 	painter.DrawDynamicText(tb.Rect.X, tb.Rect.Y, tb.Label, resolved)
 }
 

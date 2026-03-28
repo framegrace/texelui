@@ -181,13 +181,19 @@ func (p *Painter) SetDynamicCell(x, y int, ch rune, ds color.DynamicStyle) {
 		return
 	}
 
+	// Use widgetRect if set, otherwise fall back to clip rect.
+	// This allows widgets to work without explicitly calling SetWidgetRect.
+	wr := p.widgetRect
+	if wr.W == 0 && wr.H == 0 {
+		wr = p.clip
+	}
 	ctx := color.ColorContext{
-		X: x - p.widgetRect.X, Y: y - p.widgetRect.Y,
-		W: p.widgetRect.W, H: p.widgetRect.H,
+		X: x - wr.X, Y: y - wr.Y,
+		W: wr.W, H: wr.H,
 		PX: x - p.paneRect.X, PY: y - p.paneRect.Y,
 		PW: p.paneRect.W, PH: p.paneRect.H,
 		SX: x, SY: y,
-		SW: p.screenW, SH: p.screenH,
+		SW: max(p.screenW, len(p.buf[0])), SH: max(p.screenH, len(p.buf)),
 		T: p.time,
 	}
 

@@ -275,7 +275,9 @@ func (c *textAreaContent) Draw(p *core.Painter) {
 	}
 
 	// Fill background
-	p.FillDynamic(c.Rect, ' ', ds)
+	if !c.parent.Transparent {
+		p.FillDynamic(c.Rect, ' ', ds)
+	}
 
 	textWidth := c.wrapWidth
 	if textWidth <= 0 {

@@ -146,7 +146,9 @@ func (f *Form) Draw(painter *core.Painter) {
 	if f.IsFocused() {
 		ds.Attrs |= tcell.AttrBold
 	}
-	painter.FillDynamic(f.Rect, ' ', ds)
+	if !f.Transparent {
+		painter.FillDynamic(f.Rect, ' ', ds)
+	}
 
 	// Collect all widgets with their draw order
 	type drawItem struct {

@@ -63,7 +63,9 @@ func (l *Label) Draw(painter *core.Painter) {
 	}
 
 	// Fill background
-	painter.FillDynamic(core.Rect{X: l.Rect.X, Y: l.Rect.Y, W: l.Rect.W, H: l.Rect.H}, ' ', ds)
+	if !l.Transparent {
+		painter.FillDynamic(core.Rect{X: l.Rect.X, Y: l.Rect.Y, W: l.Rect.W, H: l.Rect.H}, ' ', ds)
+	}
 
 	if l.Text == "" {
 		return
