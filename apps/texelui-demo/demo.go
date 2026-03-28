@@ -13,11 +13,15 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math"
+	"time"
 
 	"github.com/framegrace/texelui/adapter"
+	dyncolor "github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/scroll"
 	"github.com/framegrace/texelui/widgets"
+	"github.com/gdamore/tcell/v2"
 )
 
 // New creates a new TexelUI widget showcase demo app.
@@ -48,6 +52,9 @@ func New() core.App {
 	// === Scrolling Tab (dedicated scroll demo) ===
 	tabPanel.AddTab("Scrolling", createScrollingTab())
 
+	// === Gradients Tab (dynamic color pipeline demo) ===
+	tabPanel.AddTab("Gradients", createGradientsTab())
+
 	ui.AddWidget(tabPanel)
 	ui.Focus(tabPanel)
 
@@ -63,6 +70,21 @@ func New() core.App {
 			imgLabel.Text = "Image (block art):"
 		}
 	})
+
+	// Animation ticker for Gradients tab — drives redraws at ~30fps
+	go func() {
+		ticker := time.NewTicker(33 * time.Millisecond)
+		defer ticker.Stop()
+		for range ticker.C {
+			if ch := app.RefreshChan(); ch != nil {
+				select {
+				case ch <- true:
+				default:
+				}
+			}
+		}
+	}()
+
 	return app
 }
 
@@ -481,4 +503,215 @@ func createScrollingTab() core.Widget {
 	scrollPane.SetContentHeight(59)
 
 	return scrollPane
+}
+
+// GradientBox is a minimal widget that fills its rectangle with a DynamicStyle.
+type GradientBox struct {
+	core.BaseWidget
+	Style dyncolor.DynamicStyle
+	Label string
+}
+
+func (g *GradientBox) Draw(p *core.Painter) {
+	p.SetWidgetRect(g.Rect)
+	p.FillDynamic(g.Rect, ' ', g.Style)
+	if g.Label != "" {
+		x := g.Rect.X + (g.Rect.W-len(g.Label))/2
+		y := g.Rect.Y + g.Rect.H/2
+		labelStyle := dyncolor.DynamicStyle{
+			FG: dyncolor.Solid(tcell.ColorWhite),
+			BG: g.Style.BG,
+		}
+		p.DrawDynamicText(x, y, g.Label, labelStyle)
+	}
+}
+
+// createGradientsTab creates the Gradients tab demonstrating the dynamic color pipeline.
+func createGradientsTab() core.Widget {
+	pane := widgets.NewPane()
+
+	// Title
+	title := widgets.NewLabel("Dynamic Colors Demo")
+	title.SetPosition(2, 1)
+	pane.AddChild(title)
+
+	// 1. Horizontal gradient (red -> purple -> blue)
+	hGrad := &GradientBox{
+		Style: dyncolor.DynamicStyle{
+			BG: dyncolor.Linear(0,
+				dyncolor.Stop(0, tcell.NewRGBColor(255, 0, 0)),
+				dyncolor.Stop(0.5, tcell.NewRGBColor(128, 0, 255)),
+				dyncolor.Stop(1, tcell.NewRGBColor(0, 0, 255)),
+			).WithLocal().Build(),
+		},
+		Label: "Horizontal (0\u00b0)",
+	}
+	hGrad.SetPosition(2, 3)
+	hGrad.Resize(30, 3)
+	pane.AddChild(hGrad)
+
+	// 2. Vertical gradient (warm -> cool)
+	vGrad := &GradientBox{
+		Style: dyncolor.DynamicStyle{
+			BG: dyncolor.Linear(90,
+				dyncolor.Stop(0, tcell.NewRGBColor(255, 200, 50)),
+				dyncolor.Stop(1, tcell.NewRGBColor(50, 50, 200)),
+			).WithLocal().Build(),
+		},
+		Label: "Vertical (90\u00b0)",
+	}
+	vGrad.SetPosition(35, 3)
+	vGrad.Resize(30, 5)
+	pane.AddChild(vGrad)
+
+	// 3. Diagonal gradient
+	dGrad := &GradientBox{
+		Style: dyncolor.DynamicStyle{
+			BG: dyncolor.Linear(45,
+				dyncolor.Stop(0, tcell.NewRGBColor(0, 255, 100)),
+				dyncolor.Stop(1, tcell.NewRGBColor(255, 50, 200)),
+			).WithLocal().Build(),
+		},
+		Label: "Diagonal (45\u00b0)",
+	}
+	dGrad.SetPosition(2, 7)
+	dGrad.Resize(30, 5)
+	pane.AddChild(dGrad)
+
+	// 4. Radial gradient
+	rGrad := &GradientBox{
+		Style: dyncolor.DynamicStyle{
+			BG: dyncolor.Radial(0.5, 0.5,
+				dyncolor.Stop(0, tcell.NewRGBColor(255, 255, 200)),
+				dyncolor.Stop(1, tcell.NewRGBColor(20, 20, 80)),
+			).WithLocal().Build(),
+		},
+		Label: "Radial",
+	}
+	rGrad.SetPosition(35, 9)
+	rGrad.Resize(30, 7)
+	pane.AddChild(rGrad)
+
+	// 5. Rainbow gradient (multi-stop)
+	rainbow := &GradientBox{
+		Style: dyncolor.DynamicStyle{
+			BG: dyncolor.Linear(0,
+				dyncolor.Stop(0, tcell.NewRGBColor(255, 0, 0)),
+				dyncolor.Stop(0.17, tcell.NewRGBColor(255, 127, 0)),
+				dyncolor.Stop(0.33, tcell.NewRGBColor(255, 255, 0)),
+				dyncolor.Stop(0.5, tcell.NewRGBColor(0, 255, 0)),
+				dyncolor.Stop(0.67, tcell.NewRGBColor(0, 0, 255)),
+				dyncolor.Stop(0.83, tcell.NewRGBColor(75, 0, 130)),
+				dyncolor.Stop(1, tcell.NewRGBColor(148, 0, 211)),
+			).WithLocal().Build(),
+		},
+		Label: "Rainbow (7 stops)",
+	}
+	rainbow.SetPosition(2, 13)
+	rainbow.Resize(63, 3)
+	pane.AddChild(rainbow)
+
+	// 6. Animated: hue rotation (rainbow scrolls over time)
+	startTime := time.Now()
+	hueRotate := &GradientBox{
+		Style: dyncolor.DynamicStyle{
+			BG: dyncolor.AnimatedFunc(func(ctx dyncolor.ColorContext) tcell.Color {
+				t := float64(time.Since(startTime).Milliseconds()) / 3000.0 // 3s cycle
+				nx := float64(ctx.X) / math.Max(float64(ctx.W-1), 1)
+				hue := math.Mod((nx+t)*360, 360)
+				return dyncolor.OKLCHToTcell(0.7, 0.15, hue)
+			}),
+		},
+		Label: "Hue Rotation (animated)",
+	}
+	hueRotate.SetPosition(2, 17)
+	hueRotate.Resize(63, 3)
+	pane.AddChild(hueRotate)
+
+	// 7. Animated: breathing pulse (lightness oscillates)
+	breathe := &GradientBox{
+		Style: dyncolor.DynamicStyle{
+			BG: dyncolor.AnimatedFunc(func(ctx dyncolor.ColorContext) tcell.Color {
+				t := float64(time.Since(startTime).Milliseconds()) / 2000.0 // 2s cycle
+				lightness := 0.4 + 0.3*math.Sin(t*2*math.Pi)
+				return dyncolor.OKLCHToTcell(lightness, 0.15, 270) // purple breathing
+			}),
+		},
+		Label: "Breathing Pulse (animated)",
+	}
+	breathe.SetPosition(2, 21)
+	breathe.Resize(30, 3)
+	pane.AddChild(breathe)
+
+	// 8. Animated: plasma effect (spatial + time)
+	plasma := &GradientBox{
+		Style: dyncolor.DynamicStyle{
+			BG: dyncolor.AnimatedFunc(func(ctx dyncolor.ColorContext) tcell.Color {
+				t := float64(time.Since(startTime).Milliseconds()) / 2000.0
+				nx := float64(ctx.X) / math.Max(float64(ctx.W-1), 1)
+				ny := float64(ctx.Y) / math.Max(float64(ctx.H-1), 1)
+				v := math.Sin(nx*4+t*2) + math.Sin(ny*4+t*1.5) + math.Sin((nx+ny)*3+t)
+				hue := math.Mod((v+3)*60, 360) // map [-3,3] to [0,360]
+				return dyncolor.OKLCHToTcell(0.65, 0.15, hue)
+			}),
+		},
+		Label: "Plasma (animated)",
+	}
+	plasma.SetPosition(35, 21)
+	plasma.Resize(30, 5)
+	pane.AddChild(plasma)
+
+	// 9. Animated FG: rainbow text with hue rotation
+	rainbowText := &TextGradientBox{
+		Text: "The quick brown fox jumps over the lazy dog - OKLCH rainbow text!",
+		FG: dyncolor.AnimatedFunc(func(ctx dyncolor.ColorContext) tcell.Color {
+			t := float64(time.Since(startTime).Milliseconds()) / 3000.0
+			nx := float64(ctx.X) / math.Max(float64(ctx.W-1), 1)
+			hue := math.Mod((nx*0.8+t)*360, 360)
+			return dyncolor.OKLCHToTcell(0.75, 0.18, hue)
+		}),
+	}
+	rainbowText.SetPosition(2, 27)
+	rainbowText.Resize(66, 1)
+	pane.AddChild(rainbowText)
+
+	// 10. Animated FG: pulsing accent text
+	pulseText := &TextGradientBox{
+		Text: ">>> Breathing text effect <<<",
+		FG: dyncolor.AnimatedFunc(func(ctx dyncolor.ColorContext) tcell.Color {
+			t := float64(time.Since(startTime).Milliseconds()) / 1500.0
+			lightness := 0.5 + 0.35*math.Sin(t*2*math.Pi)
+			return dyncolor.OKLCHToTcell(lightness, 0.2, 300) // magenta pulse
+		}),
+	}
+	pulseText.SetPosition(2, 29)
+	pulseText.Resize(40, 1)
+	pane.AddChild(pulseText)
+
+	// Help text
+	help := widgets.NewLabel("Gradients in OKLCH | Animated demos use time.Now() directly")
+	help.SetPosition(2, 31)
+	pane.AddChild(help)
+
+	return pane
+}
+
+// TextGradientBox renders text with a dynamic FG color on the default background.
+type TextGradientBox struct {
+	core.BaseWidget
+	Text string
+	FG   dyncolor.DynamicColor
+}
+
+func (g *TextGradientBox) Draw(p *core.Painter) {
+	p.SetWidgetRect(g.Rect)
+	ds := dyncolor.DynamicStyle{FG: g.FG}
+	x := g.Rect.X
+	for i, ch := range g.Text {
+		if i >= g.Rect.W {
+			break
+		}
+		p.SetDynamicCell(x, g.Rect.Y, ch, ds)
+		x++
+	}
 }

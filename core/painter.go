@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/framegrace/texelui/color"
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -9,6 +10,13 @@ type Painter struct {
 	buf  [][]Cell
 	clip Rect
 	gp   GraphicsProvider
+	// Dynamic color context
+	widgetRect Rect
+	paneRect   Rect
+	screenW    int
+	screenH    int
+	time       float32
+	hasAnim    bool
 }
 
 func NewPainter(buf [][]Cell, clip Rect) *Painter {
@@ -102,7 +110,16 @@ func (p *Painter) WithClip(rect Rect) *Painter {
 
 	// If no valid intersection, return painter with zero-size clip
 	if left >= right || top >= bottom {
-		return &Painter{buf: p.buf, clip: Rect{}, gp: p.gp}
+		return &Painter{
+			buf:        p.buf,
+			clip:       Rect{},
+			gp:         p.gp,
+			widgetRect: p.widgetRect,
+			paneRect:   p.paneRect,
+			screenW:    p.screenW,
+			screenH:    p.screenH,
+			time:       p.time,
+		}
 	}
 
 	return &Painter{
@@ -113,6 +130,90 @@ func (p *Painter) WithClip(rect Rect) *Painter {
 			W: right - left,
 			H: bottom - top,
 		},
-		gp: p.gp,
+		gp:         p.gp,
+		widgetRect: p.widgetRect,
+		paneRect:   p.paneRect,
+		screenW:    p.screenW,
+		screenH:    p.screenH,
+		time:       p.time,
+	}
+}
+
+// SetWidgetRect sets the widget rectangle for dynamic color context.
+func (p *Painter) SetWidgetRect(r Rect) { p.widgetRect = r }
+
+// SetPaneRect sets the pane rectangle for dynamic color context.
+func (p *Painter) SetPaneRect(r Rect) { p.paneRect = r }
+
+// SetScreenSize sets the screen dimensions for dynamic color context.
+func (p *Painter) SetScreenSize(w, h int) { p.screenW = w; p.screenH = h }
+
+// SetTime sets the animation time for dynamic color context.
+func (p *Painter) SetTime(t float32) { p.time = t }
+
+// HasAnimations reports whether any drawn dynamic color was animated.
+func (p *Painter) HasAnimations() bool { return p.hasAnim }
+
+// SetDynamicCell writes a cell using a DynamicStyle, resolving colors from context.
+func (p *Painter) SetDynamicCell(x, y int, ch rune, ds color.DynamicStyle) {
+	if p.buf == nil {
+		return
+	}
+	if x < p.clip.X || y < p.clip.Y || x >= p.clip.X+p.clip.W || y >= p.clip.Y+p.clip.H {
+		return
+	}
+	if y < 0 || y >= len(p.buf) || x < 0 || x >= len(p.buf[y]) {
+		return
+	}
+
+	if ds.FG.IsAnimated() || ds.BG.IsAnimated() {
+		p.hasAnim = true
+	}
+
+	// Fast path: both static
+	if ds.FG.IsStatic() && ds.BG.IsStatic() {
+		style := tcell.StyleDefault.Foreground(ds.FG.Resolve(color.ColorContext{})).
+			Background(ds.BG.Resolve(color.ColorContext{}))
+		if ds.Attrs != 0 {
+			style = style.Attributes(ds.Attrs)
+		}
+		p.buf[y][x] = Cell{Ch: ch, Style: style}
+		return
+	}
+
+	ctx := color.ColorContext{
+		X: x - p.widgetRect.X, Y: y - p.widgetRect.Y,
+		W: p.widgetRect.W, H: p.widgetRect.H,
+		PX: x - p.paneRect.X, PY: y - p.paneRect.Y,
+		PW: p.paneRect.W, PH: p.paneRect.H,
+		SX: x, SY: y,
+		SW: p.screenW, SH: p.screenH,
+		T: p.time,
+	}
+
+	fg := ds.FG.Resolve(ctx)
+	bg := ds.BG.Resolve(ctx)
+	style := tcell.StyleDefault.Foreground(fg).Background(bg)
+	if ds.Attrs != 0 {
+		style = style.Attributes(ds.Attrs)
+	}
+	p.buf[y][x] = Cell{Ch: ch, Style: style}
+}
+
+// FillDynamic fills a rectangle using a DynamicStyle.
+func (p *Painter) FillDynamic(rect Rect, ch rune, ds color.DynamicStyle) {
+	for yy := rect.Y; yy < rect.Y+rect.H; yy++ {
+		for xx := rect.X; xx < rect.X+rect.W; xx++ {
+			p.SetDynamicCell(xx, yy, ch, ds)
+		}
+	}
+}
+
+// DrawDynamicText draws a string using a DynamicStyle.
+func (p *Painter) DrawDynamicText(x, y int, s string, ds color.DynamicStyle) {
+	xx := x
+	for _, r := range s {
+		p.SetDynamicCell(xx, y, r, ds)
+		xx++
 	}
 }

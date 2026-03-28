@@ -108,6 +108,26 @@ func (p *Pane) Draw(painter *core.Painter) {
 	}
 }
 
+// DrawChildren draws only the children (z-sorted), without the background fill.
+// Useful for subclasses that provide their own background rendering.
+func (p *Pane) DrawChildren(painter *core.Painter) {
+	sorted := make([]core.Widget, len(p.children))
+	copy(sorted, p.children)
+	sort.Slice(sorted, func(i, j int) bool {
+		zi, zj := 0, 0
+		if z, ok := sorted[i].(core.ZIndexer); ok {
+			zi = z.ZIndex()
+		}
+		if z, ok := sorted[j].(core.ZIndexer); ok {
+			zj = z.ZIndex()
+		}
+		return zi < zj
+	})
+	for _, child := range sorted {
+		child.Draw(painter)
+	}
+}
+
 // VisitChildren implements core.ChildContainer for focus traversal.
 func (p *Pane) VisitChildren(f func(core.Widget)) {
 	for _, child := range p.children {
