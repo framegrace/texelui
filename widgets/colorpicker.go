@@ -134,8 +134,6 @@ func NewColorPicker(config ColorPickerConfig) *ColorPicker {
 
 	// Create tab bar — compact mode (no blend row) since it sits on the border
 	cp.tabBar = primitives.NewTabBar(0, 0, 40, tabItems)
-	cp.tabBar.Style.NoBlendRow = true
-	// Bar background matches content surface so tabs replace the border cleanly
 	cp.tabBar.Style.BarBG = theme.Get().GetSemanticColor("bg.surface")
 	cp.tabBar.OnChange = func(idx int) {
 		if idx >= 0 && idx < len(cp.modeOrder) {
@@ -371,18 +369,13 @@ func (cp *ColorPicker) drawExpanded(painter *core.Painter) {
 	bg := tm.GetSemanticColor("bg.surface")
 	baseStyle := tcell.StyleDefault.Foreground(fg).Background(bg)
 
-	// Fill background
-	painter.Fill(cp.Rect, ' ', baseStyle)
-
-	// Draw border
-	borderStyle := cp.EffectiveStyle(baseStyle)
-	painter.DrawBorder(cp.Rect, borderStyle, [6]rune{'─', '│', '┌', '┐', '└', '┘'})
-
-	// Position and draw tab bar on top border (after the corner)
+	// Tab bar at top
+	tbH := 0
 	if cp.tabBar != nil {
+		tbH = cp.tabBar.TabBarHeight()
 		tabBarFocused := cp.focus == focusTabBar
-		cp.tabBar.SetPosition(cp.Rect.X+1, cp.Rect.Y)
-		cp.tabBar.Resize(cp.Rect.W-2, cp.tabBar.TabBarHeight())
+		cp.tabBar.SetPosition(cp.Rect.X, cp.Rect.Y)
+		cp.tabBar.Resize(cp.Rect.W, tbH)
 		if tabBarFocused {
 			cp.tabBar.Focus()
 		} else {
@@ -391,12 +384,23 @@ func (cp *ColorPicker) drawExpanded(painter *core.Painter) {
 		cp.tabBar.Draw(painter)
 	}
 
-	// Draw mode content inside border (below tab bar)
+	// Border below the tab bar
+	borderRect := core.Rect{
+		X: cp.Rect.X,
+		Y: cp.Rect.Y + tbH,
+		W: cp.Rect.W,
+		H: cp.Rect.H - tbH,
+	}
+	borderStyle := cp.EffectiveStyle(baseStyle)
+	painter.Fill(borderRect, ' ', baseStyle)
+	painter.DrawBorder(borderRect, borderStyle, [6]rune{'─', '│', '┌', '┐', '└', '┘'})
+
+	// Content inside border
 	contentRect := core.Rect{
-		X: cp.Rect.X + 1,
-		Y: cp.Rect.Y + 1,
-		W: cp.Rect.W - 2,
-		H: cp.Rect.H - 2,
+		X: borderRect.X + 1,
+		Y: borderRect.Y + 1,
+		W: borderRect.W - 2,
+		H: borderRect.H - 2,
 	}
 
 	if cp.currentMode == ColorModeOKLCH && cp.oklchEditor != nil {
@@ -634,16 +638,12 @@ func (cp *ColorPicker) calculateSize() {
 		}
 		cp.Resize(w, 1)
 	} else {
-		// Calculate minimum width needed for tabs
-		// TabBar format: ► Semantic  Palette  Custom
-		// Plus 2 for left/right borders
-		tabsWidth := 2 // Left and right border
+		// Calculate minimum width for powerline tabs:
+		// [leftTri] + [" Label " + sep] per tab + [rightTri]
+		tabsWidth := 2 // leading + trailing triangles
 		if cp.tabBar != nil {
-			// Estimate TabBar width: focus marker + tabs + spacing
-			tabsWidth += 1 // Focus marker
 			for _, mode := range cp.modeOrder {
-				tabName := " " + mode.String() + " "
-				tabsWidth += len(tabName) + 1 // tab + spacing
+				tabsWidth += len(" "+mode.String()+" ") + 1 // label + separator
 			}
 		}
 
@@ -671,6 +671,11 @@ func (cp *ColorPicker) calculateSize() {
 		// Ensure width is at least enough for all tabs
 		if tabsWidth > w {
 			w = tabsWidth
+		}
+
+		// Add tab bar height (tabs sit above the border)
+		if cp.tabBar != nil {
+			h += cp.tabBar.TabBarHeight()
 		}
 
 		cp.Resize(w, h)

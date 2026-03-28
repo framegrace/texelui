@@ -47,6 +47,15 @@ func (p *Painter) Size() (int, int) {
 	return w, h
 }
 
+// GetCell returns the character and style at the given position, or (' ', default) if out of bounds.
+func (p *Painter) GetCell(x, y int) (rune, tcell.Style) {
+	if p.buf != nil && y >= 0 && y < len(p.buf) && x >= 0 && x < len(p.buf[y]) {
+		c := p.buf[y][x]
+		return c.Ch, c.Style
+	}
+	return ' ', tcell.StyleDefault
+}
+
 func (p *Painter) SetCell(x, y int, ch rune, style tcell.Style) {
 	if p.buf == nil {
 		return
