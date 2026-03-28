@@ -25,8 +25,8 @@ func TestTabBar_NewTabBar(t *testing.T) {
 	}
 
 	w, h := tb.Size()
-	if w != 40 || h != 1 {
-		t.Errorf("expected size (40,1), got (%d,%d)", w, h)
+	if w != 40 || h != 2 {
+		t.Errorf("expected size (40,2), got (%d,%d)", w, h)
 	}
 
 	if tb.ActiveIdx != 0 {
@@ -35,6 +35,36 @@ func TestTabBar_NewTabBar(t *testing.T) {
 
 	if !tb.Focusable() {
 		t.Error("expected TabBar to be focusable")
+	}
+}
+
+func TestTabBar_TabBarHeight(t *testing.T) {
+	tabs := []TabItem{{Label: "A"}}
+
+	// Default: blend row enabled, height = 2
+	tb := NewTabBar(0, 0, 20, tabs)
+	if h := tb.TabBarHeight(); h != 2 {
+		t.Errorf("expected default TabBarHeight 2, got %d", h)
+	}
+	_, sh := tb.Size()
+	if sh != 2 {
+		t.Errorf("expected Size height 2, got %d", sh)
+	}
+
+	// NoBlendRow: height = 1
+	tb2 := &TabBar{
+		Tabs:     tabs,
+		Style:    TabBarStyle{NoBlendRow: true},
+		hoverIdx: -1,
+	}
+	tb2.SetPosition(0, 0)
+	tb2.Resize(20, tb2.TabBarHeight())
+	if h := tb2.TabBarHeight(); h != 1 {
+		t.Errorf("expected NoBlendRow TabBarHeight 1, got %d", h)
+	}
+	_, sh = tb2.Size()
+	if sh != 1 {
+		t.Errorf("expected NoBlendRow Size height 1, got %d", sh)
 	}
 }
 

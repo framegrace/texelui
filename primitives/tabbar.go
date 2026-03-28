@@ -12,6 +12,27 @@ import (
 	"github.com/framegrace/texelui/core"
 )
 
+// Powerline separator characters (Nerd Font Private Use Area).
+const (
+	plLeftTriangle  = '\ue0ba'
+	plRightTriangle = '\ue0b8'
+	plLeftThinLine  = '\ue0bb'
+	plRightThinLine = '\ue0b9'
+	blendChar       = '\u2580' // Upper half block
+)
+
+// TabBarStyle controls the colors used by the tab bar.
+// Zero-value fields are resolved from the theme at draw time.
+type TabBarStyle struct {
+	ActiveBG   tcell.Color
+	ActiveFG   tcell.Color
+	InactiveBG tcell.Color
+	InactiveFG tcell.Color
+	BarBG      tcell.Color
+	ContentBG  tcell.Color
+	NoBlendRow bool
+}
+
 // TabItem represents a single tab in a TabBar.
 type TabItem struct {
 	Label string
@@ -27,6 +48,7 @@ type TabBar struct {
 	OnChange  func(int) // Called when active tab changes
 
 	// Styling
+	Style           TabBarStyle
 	ShowFocusMarker bool // Show '►' marker when focused (default true)
 
 	// Mouse hover state
@@ -35,8 +57,18 @@ type TabBar struct {
 	inv func(core.Rect)
 }
 
+// TabBarHeight returns the height needed by the tab bar.
+// Returns 2 when the blend row is enabled (default), 1 otherwise.
+func (tb *TabBar) TabBarHeight() int {
+	if tb.Style.NoBlendRow {
+		return 1
+	}
+	return 2
+}
+
 // NewTabBar creates a new tab bar at the specified position.
-// Width determines the available space for tabs. Height is always 1.
+// Width determines the available space for tabs. Height is 2 by default
+// (1 tab row + 1 blend row), or 1 if Style.NoBlendRow is set.
 func NewTabBar(x, y, w int, tabs []TabItem) *TabBar {
 	tb := &TabBar{
 		Tabs:            tabs,
@@ -46,7 +78,7 @@ func NewTabBar(x, y, w int, tabs []TabItem) *TabBar {
 	}
 
 	tb.SetPosition(x, y)
-	tb.Resize(w, 1)
+	tb.Resize(w, tb.TabBarHeight())
 	tb.SetFocusable(true)
 
 	// Configure focus style from theme
