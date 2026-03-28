@@ -65,6 +65,9 @@ func (a *UIApp) HandleMouse(ev *tcell.EventMouse) { a.ui.HandleMouse(ev) }
 
 func (a *UIApp) SetRefreshNotifier(ch chan<- bool) { a.refresh = ch; a.ui.SetRefreshNotifier(ch) }
 
+// RefreshChan returns the refresh notification channel, or nil if not set.
+func (a *UIApp) RefreshChan() chan<- bool { return a.refresh }
+
 // UI returns the underlying UIManager for composition.
 func (a *UIApp) UI() *core.UIManager { return a.ui }
 

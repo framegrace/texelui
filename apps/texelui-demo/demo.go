@@ -13,6 +13,8 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math"
+	"time"
 
 	"github.com/framegrace/texelui/adapter"
 	dyncolor "github.com/framegrace/texelui/color"
@@ -68,6 +70,21 @@ func New() core.App {
 			imgLabel.Text = "Image (block art):"
 		}
 	})
+
+	// Animation ticker for Gradients tab — drives redraws at ~30fps
+	go func() {
+		ticker := time.NewTicker(33 * time.Millisecond)
+		defer ticker.Stop()
+		for range ticker.C {
+			if ch := app.RefreshChan(); ch != nil {
+				select {
+				case ch <- true:
+				default:
+				}
+			}
+		}
+	}()
+
 	return app
 }
 
@@ -594,9 +611,59 @@ func createGradientsTab() core.Widget {
 	rainbow.Resize(63, 3)
 	pane.AddChild(rainbow)
 
+	// 6. Animated: hue rotation (rainbow scrolls over time)
+	startTime := time.Now()
+	hueRotate := &GradientBox{
+		Style: dyncolor.DynamicStyle{
+			BG: dyncolor.AnimatedFunc(func(ctx dyncolor.ColorContext) tcell.Color {
+				t := float64(time.Since(startTime).Milliseconds()) / 3000.0 // 3s cycle
+				nx := float64(ctx.X) / math.Max(float64(ctx.W-1), 1)
+				hue := math.Mod((nx+t)*360, 360)
+				return dyncolor.OKLCHToTcell(0.7, 0.15, hue)
+			}),
+		},
+		Label: "Hue Rotation (animated)",
+	}
+	hueRotate.SetPosition(2, 17)
+	hueRotate.Resize(63, 3)
+	pane.AddChild(hueRotate)
+
+	// 7. Animated: breathing pulse (lightness oscillates)
+	breathe := &GradientBox{
+		Style: dyncolor.DynamicStyle{
+			BG: dyncolor.AnimatedFunc(func(ctx dyncolor.ColorContext) tcell.Color {
+				t := float64(time.Since(startTime).Milliseconds()) / 2000.0 // 2s cycle
+				lightness := 0.4 + 0.3*math.Sin(t*2*math.Pi)
+				return dyncolor.OKLCHToTcell(lightness, 0.15, 270) // purple breathing
+			}),
+		},
+		Label: "Breathing Pulse (animated)",
+	}
+	breathe.SetPosition(2, 21)
+	breathe.Resize(30, 3)
+	pane.AddChild(breathe)
+
+	// 8. Animated: plasma effect (spatial + time)
+	plasma := &GradientBox{
+		Style: dyncolor.DynamicStyle{
+			BG: dyncolor.AnimatedFunc(func(ctx dyncolor.ColorContext) tcell.Color {
+				t := float64(time.Since(startTime).Milliseconds()) / 2000.0
+				nx := float64(ctx.X) / math.Max(float64(ctx.W-1), 1)
+				ny := float64(ctx.Y) / math.Max(float64(ctx.H-1), 1)
+				v := math.Sin(nx*4+t*2) + math.Sin(ny*4+t*1.5) + math.Sin((nx+ny)*3+t)
+				hue := math.Mod((v+3)*60, 360) // map [-3,3] to [0,360]
+				return dyncolor.OKLCHToTcell(0.65, 0.15, hue)
+			}),
+		},
+		Label: "Plasma (animated)",
+	}
+	plasma.SetPosition(35, 21)
+	plasma.Resize(30, 5)
+	pane.AddChild(plasma)
+
 	// Help text
-	help := widgets.NewLabel("Gradients interpolated in OKLCH color space for perceptual smoothness")
-	help.SetPosition(2, 17)
+	help := widgets.NewLabel("Gradients in OKLCH | Animated demos use time.Now() directly")
+	help.SetPosition(2, 27)
 	pane.AddChild(help)
 
 	return pane
