@@ -150,6 +150,15 @@ func (f *Form) Draw(painter *core.Painter) {
 		painter.FillDynamic(f.Rect, ' ', ds)
 	}
 
+	// Propagate transparency to children so gradient shows through
+	if f.Transparent {
+		for _, row := range f.rows {
+			if row.Label != nil {
+				row.Label.Transparent = true
+			}
+		}
+	}
+
 	// Collect all widgets with their draw order
 	type drawItem struct {
 		widget core.Widget

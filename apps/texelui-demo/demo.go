@@ -106,18 +106,18 @@ func createInputsTab() *widgets.Form {
 	form := widgets.NewForm()
 	form.Transparent = true // Let scroll pane's gradient show through
 
-	// Basic text inputs
-	nameInput := widgets.NewInput()
-	nameInput.Placeholder = "Enter your name"
-	form.AddField("Name:", nameInput)
+	// Helper to make a transparent input
+	transparentInput := func(placeholder string) *widgets.Input {
+		inp := widgets.NewInput()
+		inp.Placeholder = placeholder
+		inp.Transparent = true
+		return inp
+	}
 
-	emailInput := widgets.NewInput()
-	emailInput.Placeholder = "user@example.com"
-	form.AddField("Email:", emailInput)
-
-	phoneInput := widgets.NewInput()
-	phoneInput.Placeholder = "+1 (555) 000-0000"
-	form.AddField("Phone:", phoneInput)
+	// Basic text inputs (transparent so gradient shows through)
+	form.AddField("Name:", transparentInput("Enter your name"))
+	form.AddField("Email:", transparentInput("user@example.com"))
+	form.AddField("Phone:", transparentInput("+1 (555) 000-0000"))
 
 	// ComboBox (editable) - for country selection with autocomplete
 	countries := []string{
@@ -195,20 +195,21 @@ func createInputsTab() *widgets.Form {
 
 	// Checkboxes as full-width fields
 	check1 := widgets.NewCheckbox("Email notifications")
+	check1.Transparent = true
 	form.AddFullWidthField(check1, 1)
 
 	check2 := widgets.NewCheckbox("SMS notifications")
+	check2.Transparent = true
 	form.AddFullWidthField(check2, 1)
 
 	check3 := widgets.NewCheckbox("Newsletter subscription")
-	// Breathing accent checkbox text
-	check3.Style = dyncolor.DynamicStyle{
-		FG: dyncolor.AnimatedFunc(func(ctx dyncolor.ColorContext) tcell.Color {
-			t := float64(time.Since(startTime).Milliseconds()) / 2000.0
-			lightness := 0.55 + 0.25*math.Sin(t*2*math.Pi)
-			return dyncolor.OKLCHToTcell(lightness, 0.18, 300)
-		}),
-	}
+	check3.Transparent = true
+	// Breathing accent checkbox text — keep existing BG, just override FG
+	check3.Style.FG = dyncolor.AnimatedFunc(func(ctx dyncolor.ColorContext) tcell.Color {
+		t := float64(time.Since(startTime).Milliseconds()) / 2000.0
+		lightness := 0.55 + 0.25*math.Sin(t*2*math.Pi)
+		return dyncolor.OKLCHToTcell(lightness, 0.18, 300)
+	})
 	form.AddFullWidthField(check3, 1)
 
 	return form

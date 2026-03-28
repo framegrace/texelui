@@ -75,7 +75,11 @@ func (c *Checkbox) Draw(painter *core.Painter) {
 
 	// Draw checkbox indicator and label
 	displayText := checkChar + c.Label
-	painter.DrawDynamicText(c.Rect.X, c.Rect.Y, displayText, ds)
+	if c.Transparent {
+		painter.DrawDynamicTextKeepBG(c.Rect.X, c.Rect.Y, displayText, ds)
+	} else {
+		painter.DrawDynamicText(c.Rect.X, c.Rect.Y, displayText, ds)
+	}
 }
 
 // HandleKey processes keyboard input. Space toggles the checkbox.

@@ -111,7 +111,11 @@ func (i *Input) Draw(painter *core.Painter) {
 			FG: color.Solid(tcell.ColorGray),
 			BG: color.Solid(bg),
 		}
-		painter.DrawDynamicText(i.Rect.X, i.Rect.Y, i.Placeholder, placeholderStyle)
+		if i.Transparent {
+			painter.DrawDynamicTextKeepBG(i.Rect.X, i.Rect.Y, i.Placeholder, placeholderStyle)
+		} else {
+			painter.DrawDynamicText(i.Rect.X, i.Rect.Y, i.Placeholder, placeholderStyle)
+		}
 		return
 	}
 
@@ -123,8 +127,12 @@ func (i *Input) Draw(painter *core.Painter) {
 
 	// Render visible portion of text
 	x := i.Rect.X
+	drawText := painter.DrawDynamicText
+	if i.Transparent {
+		drawText = painter.DrawDynamicTextKeepBG
+	}
 	for idx := i.OffX; idx < len(runes) && x < i.Rect.X+i.Rect.W; idx++ {
-		painter.DrawDynamicText(x, i.Rect.Y, string(runes[idx]), ds)
+		drawText(x, i.Rect.Y, string(runes[idx]), ds)
 		x++
 	}
 

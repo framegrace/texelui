@@ -87,7 +87,11 @@ func (b *Button) Draw(painter *core.Painter) {
 	x := b.Rect.X + (b.Rect.W-textLen)/2
 	y := b.Rect.Y + b.Rect.H/2
 
-	painter.DrawDynamicText(x, y, displayText, ds)
+	if b.Transparent {
+		painter.DrawDynamicTextKeepBG(x, y, displayText, ds)
+	} else {
+		painter.DrawDynamicText(x, y, displayText, ds)
+	}
 }
 
 // HandleKey processes keyboard input. Enter or Space activates the button.

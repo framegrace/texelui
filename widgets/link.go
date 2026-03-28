@@ -77,7 +77,11 @@ func (l *Link) Draw(painter *core.Painter) {
 	}
 
 	// Draw text at position
-	painter.DrawDynamicText(l.Rect.X, l.Rect.Y+l.Rect.H/2, displayText, ds)
+	if l.Transparent {
+		painter.DrawDynamicTextKeepBG(l.Rect.X, l.Rect.Y+l.Rect.H/2, displayText, ds)
+	} else {
+		painter.DrawDynamicText(l.Rect.X, l.Rect.Y+l.Rect.H/2, displayText, ds)
+	}
 }
 
 // HandleKey processes keyboard input. Enter triggers the OnClick callback.

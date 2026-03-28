@@ -59,6 +59,23 @@ func (p *Painter) SetCell(x, y int, ch rune, style tcell.Style) {
 	}
 }
 
+// SetCellKeepBG writes a character and FG color but preserves the existing cell's background.
+// Used by transparent widgets to overlay text on a parent's gradient/background.
+func (p *Painter) SetCellKeepBG(x, y int, ch rune, style tcell.Style) {
+	if p.buf == nil {
+		return
+	}
+	if x < p.clip.X || y < p.clip.Y || x >= p.clip.X+p.clip.W || y >= p.clip.Y+p.clip.H {
+		return
+	}
+	if y >= 0 && y < len(p.buf) && x >= 0 && len(p.buf) > 0 && x < len(p.buf[y]) {
+		// Preserve existing BG, apply new FG + char + attrs
+		_, existingBG, _ := p.buf[y][x].Style.Decompose()
+		newFG, _, newAttrs := style.Decompose()
+		p.buf[y][x] = Cell{Ch: ch, Style: tcell.StyleDefault.Foreground(newFG).Background(existingBG).Attributes(newAttrs)}
+	}
+}
+
 func (p *Painter) Fill(rect Rect, ch rune, style tcell.Style) {
 	for yy := rect.Y; yy < rect.Y+rect.H; yy++ {
 		for xx := rect.X; xx < rect.X+rect.W; xx++ {
@@ -204,6 +221,56 @@ func (p *Painter) SetDynamicCell(x, y int, ch rune, ds color.DynamicStyle) {
 		style = style.Attributes(ds.Attrs)
 	}
 	p.buf[y][x] = Cell{Ch: ch, Style: style}
+}
+
+// SetDynamicCellKeepBG writes a character with dynamic FG but preserves existing BG.
+// Used by transparent widgets to overlay text on a parent's background/gradient.
+func (p *Painter) SetDynamicCellKeepBG(x, y int, ch rune, ds color.DynamicStyle) {
+	if p.buf == nil {
+		return
+	}
+	if x < p.clip.X || y < p.clip.Y || x >= p.clip.X+p.clip.W || y >= p.clip.Y+p.clip.H {
+		return
+	}
+	if y < 0 || y >= len(p.buf) || x < 0 || x >= len(p.buf[y]) {
+		return
+	}
+
+	if ds.FG.IsAnimated() {
+		p.hasAnim = true
+	}
+
+	// Resolve FG, keep existing BG
+	wr := p.widgetRect
+	if wr.W == 0 && wr.H == 0 {
+		wr = p.clip
+	}
+	ctx := color.ColorContext{
+		X: x - wr.X, Y: y - wr.Y,
+		W: wr.W, H: wr.H,
+		PX: x - p.paneRect.X, PY: y - p.paneRect.Y,
+		PW: p.paneRect.W, PH: p.paneRect.H,
+		SX: x, SY: y,
+		SW: max(p.screenW, len(p.buf[0])), SH: max(p.screenH, len(p.buf)),
+		T: p.time,
+	}
+
+	fg := ds.FG.Resolve(ctx)
+	_, existingBG, _ := p.buf[y][x].Style.Decompose()
+	style := tcell.StyleDefault.Foreground(fg).Background(existingBG)
+	if ds.Attrs != 0 {
+		style = style.Attributes(ds.Attrs)
+	}
+	p.buf[y][x] = Cell{Ch: ch, Style: style}
+}
+
+// DrawDynamicTextKeepBG draws text with dynamic FG preserving existing BG.
+func (p *Painter) DrawDynamicTextKeepBG(x, y int, s string, ds color.DynamicStyle) {
+	xx := x
+	for _, r := range s {
+		p.SetDynamicCellKeepBG(xx, y, r, ds)
+		xx++
+	}
 }
 
 // FillDynamic fills a rectangle using a DynamicStyle.

@@ -89,7 +89,11 @@ func (l *Label) Draw(painter *core.Painter) {
 
 	// Render text (center vertically if height > 1)
 	y := l.Rect.Y + l.Rect.H/2
-	painter.DrawDynamicText(startX, y, l.Text, ds)
+	if l.Transparent {
+		painter.DrawDynamicTextKeepBG(startX, y, l.Text, ds)
+	} else {
+		painter.DrawDynamicText(startX, y, l.Text, ds)
+	}
 }
 
 // SetInvalidator allows the UI manager to inject a dirty-region invalidator.
