@@ -8,7 +8,7 @@ DEMO_BIN := $(BINDIR)/texelui-demo
 
 all: build demos test
 
-build:
+build: demos
 	$(GO) build ./...
 
 demos: $(TEXELUI_BIN) $(DEMO_BIN)
