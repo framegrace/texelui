@@ -155,8 +155,14 @@ func (tb *TabBar) Draw(painter *core.Painter) {
 	y := tb.Rect.Y
 	maxX := tb.Rect.X + tb.Rect.W
 
+	tm := theme.Get()
 	activeStyle := tcell.StyleDefault.Foreground(s.ActiveFG).Background(s.ActiveBG)
-	inactiveStyle := tcell.StyleDefault.Foreground(s.InactiveFG).Background(s.InactiveBG)
+	// Inactive tabs: normal text when bar unfocused, accent FG when bar focused
+	inactiveFG := tm.GetSemanticColor("text.primary")
+	if focused {
+		inactiveFG = s.ActiveBG // accent color
+	}
+	inactiveStyle := tcell.StyleDefault.Foreground(inactiveFG).Background(s.InactiveBG)
 	barStyle := tcell.StyleDefault.Foreground(s.BarBG).Background(s.BarBG)
 
 	// Row 0: powerline tab row
@@ -183,8 +189,6 @@ func (tb *TabBar) Draw(painter *core.Painter) {
 			}
 		} else if isHover {
 			tabStyle = inactiveStyle.Reverse(true)
-		} else if focused {
-			tabStyle = inactiveStyle.Dim(true)
 		}
 
 		// Draw tab label characters
