@@ -5,6 +5,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/primitives"
 	"github.com/framegrace/texelui/scroll"
@@ -17,7 +18,7 @@ func TestUIManagerRendersPaneAndTextArea(t *testing.T) {
 
 	pane := widgets.NewPane()
 	pane.Resize(20, 5)
-	pane.Style = tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorWhite)
+	pane.Style = color.StyleFrom(tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorWhite))
 	ui.AddWidget(pane)
 
 	ta := widgets.NewTextArea()

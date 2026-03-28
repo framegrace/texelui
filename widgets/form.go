@@ -10,8 +10,9 @@ import (
 	"sort"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/framegrace/texelui/theme"
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
+	"github.com/framegrace/texelui/theme"
 )
 
 // FormRow represents a single row in a Form.
@@ -195,7 +196,7 @@ func (f *Form) syncLabelFocus(label *Label, focused bool) {
 		// Use primary text color (brighter) when focused
 		fg := tm.GetSemanticColor("text.primary")
 		bg := tm.GetSemanticColor("bg.surface")
-		label.Style = tcell.StyleDefault.Foreground(fg).Background(bg).Bold(true)
+		label.Style = color.StyleFrom(tcell.StyleDefault.Foreground(fg).Background(bg).Bold(true))
 	} else {
 		// Use secondary/dimmed text color when not focused
 		fg := tm.GetSemanticColor("text.secondary")
@@ -203,7 +204,7 @@ func (f *Form) syncLabelFocus(label *Label, focused bool) {
 			fg = tm.GetSemanticColor("text.primary")
 		}
 		bg := tm.GetSemanticColor("bg.surface")
-		label.Style = tcell.StyleDefault.Foreground(fg).Background(bg).Dim(true)
+		label.Style = color.StyleFrom(tcell.StyleDefault.Foreground(fg).Background(bg).Dim(true))
 	}
 }
 
