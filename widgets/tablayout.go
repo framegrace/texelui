@@ -8,15 +8,17 @@ package widgets
 
 import (
 	"github.com/gdamore/tcell/v2"
-	"github.com/framegrace/texelui/theme"
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/primitives"
+	"github.com/framegrace/texelui/theme"
 )
 
 // TabLayout is a container that combines a TabBar with switchable content panels.
 // Each tab has an associated content widget; only the active tab's content is displayed.
 type TabLayout struct {
 	core.BaseWidget
+	Style    color.DynamicStyle
 	tabBar   *primitives.TabBar
 	children []core.Widget // One widget per tab
 	inv      func(core.Rect)
@@ -31,7 +33,12 @@ type TabLayout struct {
 // Position defaults to 0,0 and size to 1x1.
 // Use SetPosition and Resize to adjust after adding to a layout.
 func NewTabLayout(tabs []primitives.TabItem) *TabLayout {
+	tm := theme.Get()
+	bg := tm.GetSemanticColor("bg.surface")
+	fg := tm.GetSemanticColor("text.primary")
+
 	tl := &TabLayout{
+		Style:    color.DynamicStyle{FG: color.Solid(fg), BG: color.Solid(bg)},
 		tabBar:   primitives.NewTabBar(0, 0, 1, tabs),
 		children: make([]core.Widget, len(tabs)),
 	}
@@ -237,12 +244,15 @@ func (tl *TabLayout) SetPosition(x, y int) {
 
 // Draw renders the tab bar and active content.
 func (tl *TabLayout) Draw(p *core.Painter) {
-	tm := theme.Get()
-	bg := tm.GetSemanticColor("bg.surface")
-	baseStyle := tcell.StyleDefault.Background(bg)
+	ds := tl.Style
+	if tl.IsFocused() {
+		ds.Attrs |= tcell.AttrBold
+	}
 
 	// Fill background
-	p.Fill(tl.Rect, ' ', baseStyle)
+	if !tl.Transparent {
+		p.FillDynamic(tl.Rect, ' ', ds)
+	}
 
 	// Draw tab bar
 	tl.tabBar.Draw(p)
