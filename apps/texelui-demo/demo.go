@@ -20,7 +20,6 @@ import (
 	dyncolor "github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/scroll"
-	"github.com/framegrace/texelui/theme"
 	"github.com/framegrace/texelui/widgets"
 	"github.com/gdamore/tcell/v2"
 )
@@ -527,34 +526,9 @@ func (g *GradientBox) Draw(p *core.Painter) {
 	}
 }
 
-// GradientPane is a Pane with a dynamic color background.
-type GradientPane struct {
-	*widgets.Pane
-	BGStyle dyncolor.DynamicStyle
-}
-
-func (gp *GradientPane) Draw(p *core.Painter) {
-	// Draw gradient background
-	p.SetWidgetRect(gp.Rect)
-	p.FillDynamic(gp.Rect, ' ', gp.BGStyle)
-	// Draw children on top (labels, boxes, etc.)
-	gp.Pane.DrawChildren(p)
-}
-
 // createGradientsTab creates the Gradients tab demonstrating the dynamic color pipeline.
 func createGradientsTab() core.Widget {
-	// Pane background: vertical gradient from theme bg.surface → black
-	tm := theme.Get()
-	surfaceBG := tm.GetSemanticColor("bg.surface")
-	pane := &GradientPane{
-		Pane: widgets.NewPane(),
-		BGStyle: dyncolor.DynamicStyle{
-			BG: dyncolor.Linear(90,
-				dyncolor.Stop(0, surfaceBG),
-				dyncolor.Stop(1, tcell.NewRGBColor(0, 0, 0)),
-			).WithLocal().Build(),
-		},
-	}
+	pane := widgets.NewPane()
 
 	// Title
 	title := widgets.NewLabel("Dynamic Colors Demo")
