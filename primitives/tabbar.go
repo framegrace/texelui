@@ -13,6 +13,118 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
+// tabEditor is a minimal inline text editor used by TabBar for tab renaming.
+// It avoids a circular import between primitives and widgets.
+type tabEditor struct {
+	text     []rune
+	caretPos int // caret position in runes (0..len(text))
+	offX     int // horizontal scroll offset
+
+	// OnSubmit is called when the user presses Enter.
+	OnSubmit func(text string)
+}
+
+// newTabEditor creates a new tabEditor pre-filled with initial text.
+func newTabEditor(initial string) *tabEditor {
+	runes := []rune(initial)
+	return &tabEditor{
+		text:     runes,
+		caretPos: len(runes),
+	}
+}
+
+// Text returns the current editor content as a string.
+func (e *tabEditor) Text() string { return string(e.text) }
+
+// HandleKey processes keyboard input. Returns true if handled.
+// Enter triggers OnSubmit; Escape is NOT handled here (caller handles it).
+func (e *tabEditor) HandleKey(ev *tcell.EventKey) bool {
+	switch ev.Key() {
+	case tcell.KeyLeft:
+		if e.caretPos > 0 {
+			e.caretPos--
+		}
+		return true
+
+	case tcell.KeyRight:
+		if e.caretPos < len(e.text) {
+			e.caretPos++
+		}
+		return true
+
+	case tcell.KeyHome:
+		e.caretPos = 0
+		return true
+
+	case tcell.KeyEnd:
+		e.caretPos = len(e.text)
+		return true
+
+	case tcell.KeyEnter:
+		if e.OnSubmit != nil {
+			e.OnSubmit(e.Text())
+		}
+		return true
+
+	case tcell.KeyBackspace, tcell.KeyBackspace2:
+		if e.caretPos > 0 {
+			e.text = append(e.text[:e.caretPos-1], e.text[e.caretPos:]...)
+			e.caretPos--
+		}
+		return true
+
+	case tcell.KeyDelete:
+		if e.caretPos < len(e.text) {
+			e.text = append(e.text[:e.caretPos], e.text[e.caretPos+1:]...)
+		}
+		return true
+
+	case tcell.KeyRune:
+		r := ev.Rune()
+		e.text = append(e.text[:e.caretPos], append([]rune{r}, e.text[e.caretPos:]...)...)
+		e.caretPos++
+		return true
+	}
+
+	return false
+}
+
+// Draw renders the editor into the painter at the given position/width.
+// Uses the provided style for text; reverses colors for the caret.
+func (e *tabEditor) Draw(painter *core.Painter, x, y, w int, style tcell.Style) {
+	if w <= 0 {
+		return
+	}
+
+	// Adjust scroll offset to keep caret visible
+	if e.caretPos < e.offX {
+		e.offX = e.caretPos
+	}
+	if e.caretPos >= e.offX+w {
+		e.offX = e.caretPos - w + 1
+	}
+	if e.offX < 0 {
+		e.offX = 0
+	}
+
+	fg, bg, attrs := style.Decompose()
+
+	// Draw text
+	for col := 0; col < w; col++ {
+		idx := e.offX + col
+		ch := ' '
+		if idx < len(e.text) {
+			ch = e.text[idx]
+		}
+		cellStyle := tcell.StyleDefault.Foreground(fg).Background(bg).Attributes(attrs)
+		// Caret: reverse video
+		if idx == e.caretPos {
+			cellStyle = tcell.StyleDefault.Foreground(bg).Background(fg)
+		}
+		painter.SetCell(x+col, y, ch, cellStyle)
+	}
+}
+
 // Powerline separator characters (Nerd Font Private Use Area).
 const (
 	plLeftTriangle  = '\ue0ba'
@@ -48,6 +160,10 @@ type TabBar struct {
 	ActiveIdx int
 	OnChange  func(int) // Called when active tab changes
 
+	// Edit mode callbacks
+	OnRename     func(index int, newName string) // Called when edit confirmed via Enter
+	OnEditCancel func(index int)                 // Called when edit cancelled via Escape
+
 	// Styling
 	Style           TabBarStyle
 	ShowFocusMarker bool // Show '►' marker when focused (default true)
@@ -58,6 +174,11 @@ type TabBar struct {
 
 	// Mouse hover state
 	hoverIdx int // Index of tab under mouse cursor (-1 if none)
+
+	// Edit mode state
+	editIdx      int        // Index being edited; -1 when not editing
+	editInput    *tabEditor // Inline text editor for renaming
+	editOriginal string     // Original label before edit started
 
 	inv func(core.Rect)
 }
@@ -80,6 +201,7 @@ func NewTabBar(x, y, w int, tabs []TabItem) *TabBar {
 		ActiveIdx:       0,
 		ShowFocusMarker: true,
 		hoverIdx:        -1,
+		editIdx:         -1,
 	}
 
 	tb.SetPosition(x, y)
@@ -196,13 +318,39 @@ func (tb *TabBar) Draw(painter *core.Painter) {
 			tabStyle = inactiveStyle.Reverse(true)
 		}
 
-		// Draw tab label characters
-		for _, ch := range tabLabel {
-			if x >= maxX {
-				break
+		// Draw tab label characters (or inline editor when editing this tab)
+		if tb.editIdx == i && tb.editInput != nil {
+			// Draw leading space with tab style
+			if x < maxX {
+				painter.SetCell(x, y, ' ', tabStyle)
+				x++
 			}
-			painter.SetCell(x, y, ch, tabStyle)
-			x++
+			// Size the editor to fit the original label width, capped at remaining space
+			labelWidth := len([]rune(tab.Label))
+			if labelWidth < 1 {
+				labelWidth = 1
+			}
+			inputW := labelWidth
+			if x+inputW > maxX {
+				inputW = maxX - x
+			}
+			if inputW > 0 {
+				tb.editInput.Draw(painter, x, y, inputW, tabStyle)
+				x += inputW
+			}
+			// Draw trailing space with tab style
+			if x < maxX {
+				painter.SetCell(x, y, ' ', tabStyle)
+				x++
+			}
+		} else {
+			for _, ch := range tabLabel {
+				if x >= maxX {
+					break
+				}
+				painter.SetCell(x, y, ch, tabStyle)
+				x++
+			}
 		}
 
 		// Draw separator between tabs (not after the last tab)
@@ -266,6 +414,22 @@ func (tb *TabBar) Draw(painter *core.Painter) {
 func (tb *TabBar) HandleKey(ev *tcell.EventKey) bool {
 	if len(tb.Tabs) == 0 {
 		return false
+	}
+
+	// When in edit mode, route keys to the inline input widget.
+	// Escape cancels; Tab confirms; Enter is handled by input's OnSubmit.
+	if tb.IsEditing() {
+		switch ev.Key() {
+		case tcell.KeyEscape:
+			tb.CancelEdit()
+			return true
+		case tcell.KeyTab:
+			// Tab confirms the edit
+			tb.confirmEdit(tb.editInput.Text())
+			return true
+		default:
+			return tb.editInput.HandleKey(ev)
+		}
 	}
 
 	switch ev.Key() {
@@ -340,10 +504,19 @@ func (tb *TabBar) HandleMouse(ev *tcell.EventMouse) bool {
 		tb.invalidate()
 	}
 
-	// Handle click for tab selection
+	// Handle click for tab selection and edit mode
 	if ev.Buttons() == tcell.Button1 {
-		if tabIdx >= 0 && tabIdx != tb.ActiveIdx {
-			tb.SetActive(tabIdx)
+		if tb.IsEditing() && tabIdx != tb.editIdx {
+			// Click outside editing tab confirms the edit
+			tb.confirmEdit(tb.editInput.Text())
+		}
+		if tabIdx >= 0 {
+			if tabIdx == tb.ActiveIdx && !tb.IsEditing() {
+				// Click on already-active tab enters edit mode
+				tb.EditTab(tabIdx)
+			} else if tabIdx != tb.ActiveIdx {
+				tb.SetActive(tabIdx)
+			}
 		}
 		return true
 	}
@@ -396,6 +569,60 @@ func (tb *TabBar) invalidate() {
 	if tb.inv != nil {
 		tb.inv(tb.Rect)
 	}
+}
+
+// IsEditing returns whether the tab bar is currently in inline edit mode.
+func (tb *TabBar) IsEditing() bool {
+	return tb.editIdx >= 0
+}
+
+// EditTab enters inline edit mode for the tab at the given index.
+// Pre-fills the input with the current label. No-op if index is out of range.
+func (tb *TabBar) EditTab(index int) {
+	if index < 0 || index >= len(tb.Tabs) {
+		return
+	}
+	tb.editIdx = index
+	tb.editOriginal = tb.Tabs[index].Label
+
+	ed := newTabEditor(tb.editOriginal)
+	ed.OnSubmit = func(text string) {
+		tb.confirmEdit(text)
+	}
+	tb.editInput = ed
+	tb.invalidate()
+}
+
+// CancelEdit cancels any active edit, reverting the label to its original value.
+func (tb *TabBar) CancelEdit() {
+	if tb.editIdx < 0 {
+		return
+	}
+	idx := tb.editIdx
+	tb.Tabs[idx].Label = tb.editOriginal
+	tb.editIdx = -1
+	tb.editInput = nil
+	tb.editOriginal = ""
+	if tb.OnEditCancel != nil {
+		tb.OnEditCancel(idx)
+	}
+	tb.invalidate()
+}
+
+// confirmEdit commits the edited text and exits edit mode.
+func (tb *TabBar) confirmEdit(text string) {
+	if tb.editIdx < 0 {
+		return
+	}
+	idx := tb.editIdx
+	tb.Tabs[idx].Label = text
+	tb.editIdx = -1
+	tb.editInput = nil
+	tb.editOriginal = ""
+	if tb.OnRename != nil {
+		tb.OnRename(idx, text)
+	}
+	tb.invalidate()
 }
 
 // GetKeyHints implements KeyHintsProvider from core package.
