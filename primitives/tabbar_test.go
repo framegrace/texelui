@@ -412,3 +412,170 @@ func TestTabBar_EmptyTabs(t *testing.T) {
 		t.Errorf("expected empty tab, got %+v", active)
 	}
 }
+
+// --- Edit mode tests ---
+
+func TestTabBar_EditTab_EnterConfirms(t *testing.T) {
+	tabs := []TabItem{
+		{Label: "Alpha", ID: "a"},
+		{Label: "Beta", ID: "b"},
+	}
+	tb := NewTabBar(0, 0, 40, tabs)
+
+	var renameIdx int = -1
+	var renameName string
+	tb.OnRename = func(idx int, name string) {
+		renameIdx = idx
+		renameName = name
+	}
+
+	// Enter edit mode on tab 0
+	tb.EditTab(0)
+	if !tb.IsEditing() {
+		t.Fatal("expected IsEditing to return true after EditTab")
+	}
+
+	// Type new text (replacing pre-filled content by pressing enter directly first,
+	// but let's simulate clearing and typing "NewName")
+	// First clear: backspace 5 times ("Alpha" = 5 chars), then type new name
+	for i := 0; i < 5; i++ {
+		ev := tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone)
+		tb.HandleKey(ev)
+	}
+	for _, ch := range "NewName" {
+		ev := tcell.NewEventKey(tcell.KeyRune, ch, tcell.ModNone)
+		tb.HandleKey(ev)
+	}
+
+	// Press Enter to confirm
+	ev := tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)
+	tb.HandleKey(ev)
+
+	if tb.IsEditing() {
+		t.Error("expected IsEditing to return false after Enter")
+	}
+	if renameIdx != 0 {
+		t.Errorf("expected OnRename called with idx 0, got %d", renameIdx)
+	}
+	if renameName != "NewName" {
+		t.Errorf("expected OnRename called with 'NewName', got %q", renameName)
+	}
+	if tb.Tabs[0].Label != "NewName" {
+		t.Errorf("expected tab label updated to 'NewName', got %q", tb.Tabs[0].Label)
+	}
+}
+
+func TestTabBar_EditTab_EscapeCancels(t *testing.T) {
+	tabs := []TabItem{
+		{Label: "Alpha", ID: "a"},
+	}
+	tb := NewTabBar(0, 0, 40, tabs)
+
+	var cancelIdx int = -1
+	tb.OnEditCancel = func(idx int) {
+		cancelIdx = idx
+	}
+
+	tb.EditTab(0)
+	if !tb.IsEditing() {
+		t.Fatal("expected IsEditing to return true after EditTab")
+	}
+
+	// Type some text to change the input
+	for _, ch := range "XYZ" {
+		ev := tcell.NewEventKey(tcell.KeyRune, ch, tcell.ModNone)
+		tb.HandleKey(ev)
+	}
+
+	// Press Escape to cancel
+	ev := tcell.NewEventKey(tcell.KeyEscape, 0, tcell.ModNone)
+	tb.HandleKey(ev)
+
+	if tb.IsEditing() {
+		t.Error("expected IsEditing to return false after Escape")
+	}
+	if cancelIdx != 0 {
+		t.Errorf("expected OnEditCancel called with idx 0, got %d", cancelIdx)
+	}
+	// Label should revert to original
+	if tb.Tabs[0].Label != "Alpha" {
+		t.Errorf("expected label to revert to 'Alpha', got %q", tb.Tabs[0].Label)
+	}
+}
+
+func TestTabBar_EditTab_EmptyConfirmsOriginal(t *testing.T) {
+	tabs := []TabItem{
+		{Label: "Alpha", ID: "a"},
+	}
+	tb := NewTabBar(0, 0, 40, tabs)
+
+	var renameIdx int = -1
+	var renameName = "sentinel"
+	tb.OnRename = func(idx int, name string) {
+		renameIdx = idx
+		renameName = name
+	}
+
+	tb.EditTab(0)
+
+	// Clear all text
+	for i := 0; i < 10; i++ {
+		ev := tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone)
+		tb.HandleKey(ev)
+	}
+
+	// Press Enter with empty text
+	ev := tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)
+	tb.HandleKey(ev)
+
+	if tb.IsEditing() {
+		t.Error("expected IsEditing to return false after Enter")
+	}
+	if renameIdx != 0 {
+		t.Errorf("expected OnRename called with idx 0, got %d", renameIdx)
+	}
+	if renameName != "" {
+		t.Errorf("expected OnRename called with empty string, got %q", renameName)
+	}
+}
+
+func TestTabBar_CancelEdit(t *testing.T) {
+	tabs := []TabItem{
+		{Label: "Tab1", ID: "t1"},
+		{Label: "Tab2", ID: "t2"},
+	}
+	tb := NewTabBar(0, 0, 40, tabs)
+
+	tb.EditTab(1)
+	if !tb.IsEditing() {
+		t.Fatal("expected IsEditing true after EditTab(1)")
+	}
+
+	tb.CancelEdit()
+	if tb.IsEditing() {
+		t.Error("expected IsEditing false after CancelEdit")
+	}
+	// Label should be unchanged
+	if tb.Tabs[1].Label != "Tab2" {
+		t.Errorf("expected label 'Tab2' after CancelEdit, got %q", tb.Tabs[1].Label)
+	}
+}
+
+func TestTabBar_EditTab_OutOfRange(t *testing.T) {
+	tabs := []TabItem{
+		{Label: "Only", ID: "only"},
+	}
+	tb := NewTabBar(0, 0, 40, tabs)
+
+	// Out-of-range index: should be a no-op
+	tb.EditTab(5)
+	if tb.IsEditing() {
+		t.Error("expected EditTab(5) on 1-tab bar to be a no-op, but IsEditing is true")
+	}
+
+	// Negative index: also a no-op
+	tb.EditTab(-1)
+	if tb.IsEditing() {
+		t.Error("expected EditTab(-1) to be a no-op, but IsEditing is true")
+	}
+}
