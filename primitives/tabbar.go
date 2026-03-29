@@ -504,10 +504,19 @@ func (tb *TabBar) HandleMouse(ev *tcell.EventMouse) bool {
 		tb.invalidate()
 	}
 
-	// Handle click for tab selection
+	// Handle click for tab selection and edit mode
 	if ev.Buttons() == tcell.Button1 {
-		if tabIdx >= 0 && tabIdx != tb.ActiveIdx {
-			tb.SetActive(tabIdx)
+		if tb.IsEditing() && tabIdx != tb.editIdx {
+			// Click outside editing tab confirms the edit
+			tb.confirmEdit(tb.editInput.Text())
+		}
+		if tabIdx >= 0 {
+			if tabIdx == tb.ActiveIdx && !tb.IsEditing() {
+				// Click on already-active tab enters edit mode
+				tb.EditTab(tabIdx)
+			} else if tabIdx != tb.ActiveIdx {
+				tb.SetActive(tabIdx)
+			}
 		}
 		return true
 	}
