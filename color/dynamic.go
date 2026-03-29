@@ -63,6 +63,11 @@ func (dc DynamicColor) IsAnimated() bool {
 	return dc.animated
 }
 
+// IsZero reports whether the color was never explicitly set.
+func (dc DynamicColor) IsZero() bool {
+	return dc.fn == nil && dc.static == 0
+}
+
 // DynamicStyle combines dynamic FG/BG with attributes.
 type DynamicStyle struct {
 	FG    DynamicColor

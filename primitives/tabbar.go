@@ -137,19 +137,20 @@ const (
 // TabBarStyle controls the colors used by the tab bar.
 // Zero-value fields are resolved from the theme at draw time.
 type TabBarStyle struct {
-	ActiveBG   tcell.Color
-	ActiveFG   tcell.Color
-	InactiveBG tcell.Color
-	InactiveFG tcell.Color
-	BarBG      tcell.Color
-	ContentBG  tcell.Color
+	ActiveBG   color.DynamicColor
+	ActiveFG   color.DynamicColor
+	InactiveBG color.DynamicColor
+	InactiveFG color.DynamicColor
+	BarBG      color.DynamicColor
+	ContentBG  color.DynamicColor
 	NoBlendRow bool // No blend row at all (height=1)
 }
 
 // TabItem represents a single tab in a TabBar.
 type TabItem struct {
 	Label string
-	ID    string // Optional identifier for the tab
+	ID    string             // Optional identifier for the tab
+	Color color.DynamicColor // Optional per-tab accent color (zero = use style defaults)
 }
 
 // TabBar is a horizontal tab navigation widget.
@@ -245,29 +246,34 @@ func (tb *TabBar) ActiveTab() TabItem {
 	return TabItem{}
 }
 
-// resolveColors returns TabBarStyle with zero-value colors resolved from theme.
-func (tb *TabBar) resolveColors() TabBarStyle {
+// resolvedTabBarColors holds static colors resolved from DynamicColor fields for one frame.
+type resolvedTabBarColors struct {
+	ActiveBG   tcell.Color
+	ActiveFG   tcell.Color
+	InactiveBG tcell.Color
+	InactiveFG tcell.Color
+	BarBG      tcell.Color
+	ContentBG  tcell.Color
+}
+
+// resolveColors resolves all DynamicColor fields to concrete colors for the current frame.
+func (tb *TabBar) resolveColors(ctx color.ColorContext) resolvedTabBarColors {
 	s := tb.Style
 	tm := theme.Get()
-	if s.ActiveBG == 0 {
-		s.ActiveBG = tm.GetSemanticColor("accent")
+	resolve := func(dc color.DynamicColor, fallback string) tcell.Color {
+		if dc.IsZero() {
+			return tm.GetSemanticColor(fallback)
+		}
+		return dc.Resolve(ctx)
 	}
-	if s.ActiveFG == 0 {
-		s.ActiveFG = tm.GetSemanticColor("text.inverse")
+	return resolvedTabBarColors{
+		ActiveBG:   resolve(s.ActiveBG, "accent"),
+		ActiveFG:   resolve(s.ActiveFG, "text.inverse"),
+		InactiveBG: resolve(s.InactiveBG, "bg.surface"),
+		InactiveFG: resolve(s.InactiveFG, "text.muted"),
+		BarBG:      resolve(s.BarBG, "bg.mantle"),
+		ContentBG:  resolve(s.ContentBG, "bg.surface"),
 	}
-	if s.InactiveBG == 0 {
-		s.InactiveBG = tm.GetSemanticColor("bg.surface")
-	}
-	if s.InactiveFG == 0 {
-		s.InactiveFG = tm.GetSemanticColor("text.muted")
-	}
-	if s.BarBG == 0 {
-		s.BarBG = tm.GetSemanticColor("bg.mantle")
-	}
-	if s.ContentBG == 0 {
-		s.ContentBG = tm.GetSemanticColor("bg.surface")
-	}
-	return s
 }
 
 // Draw renders the tab bar with powerline-style separators.
@@ -276,7 +282,20 @@ func (tb *TabBar) Draw(painter *core.Painter) {
 		return
 	}
 
-	s := tb.resolveColors()
+	// Build color context for resolving dynamic colors this frame.
+	ctx := color.ColorContext{
+		X: tb.Rect.X, Y: tb.Rect.Y,
+		W: tb.Rect.W, H: tb.Rect.H,
+		T: painter.Time(),
+	}
+	s := tb.resolveColors(ctx)
+	// If any style color is dynamic (non-static), mark the painter as animated
+	// so the framework auto-refreshes.
+	if !tb.Style.ActiveBG.IsStatic() || !tb.Style.ActiveFG.IsStatic() ||
+		!tb.Style.InactiveBG.IsStatic() || !tb.Style.InactiveFG.IsStatic() ||
+		!tb.Style.BarBG.IsStatic() || !tb.Style.ContentBG.IsStatic() {
+		painter.MarkAnimated()
+	}
 	focused := tb.IsFocused()
 	x := tb.Rect.X
 	y := tb.Rect.Y
@@ -289,17 +308,23 @@ func (tb *TabBar) Draw(painter *core.Painter) {
 	if focused {
 		inactiveFG = s.ActiveBG // accent color
 	}
-	inactiveStyle := tcell.StyleDefault.Foreground(inactiveFG).Background(s.InactiveBG)
 	barStyle := tcell.StyleDefault.Foreground(s.BarBG).Background(s.BarBG)
+
+	// tabBG returns the background color for tab i.
+	tabBG := func(i int) tcell.Color {
+		if i == tb.ActiveIdx {
+			return s.ActiveBG
+		}
+		if i >= 0 && i < len(tb.Tabs) && !tb.Tabs[i].Color.IsZero() {
+			return tb.Tabs[i].Color.Resolve(ctx)
+		}
+		return s.InactiveBG
+	}
 
 	// Row 0: powerline tab row
 	// Leading left triangle: FG = first tab's BG, BG = barBG
-	firstBG := s.InactiveBG
-	if tb.ActiveIdx == 0 {
-		firstBG = s.ActiveBG
-	}
 	if x < maxX {
-		painter.SetCell(x, y, plLeftTriangle, tcell.StyleDefault.Foreground(firstBG).Background(s.BarBG))
+		painter.SetCell(x, y, plLeftTriangle, tcell.StyleDefault.Foreground(tabBG(0)).Background(s.BarBG))
 		x++
 	}
 
@@ -308,14 +333,18 @@ func (tb *TabBar) Draw(painter *core.Painter) {
 		isActive := i == tb.ActiveIdx
 		isHover := i == tb.hoverIdx && !isActive
 
-		tabStyle := inactiveStyle
+		bg := tabBG(i)
+		var tabStyle tcell.Style
 		if isActive {
 			tabStyle = activeStyle
 			if focused {
 				tabStyle = tabStyle.Bold(true)
 			}
-		} else if isHover {
-			tabStyle = inactiveStyle.Reverse(true)
+		} else {
+			tabStyle = tcell.StyleDefault.Foreground(inactiveFG).Background(bg)
+			if isHover {
+				tabStyle = tabStyle.Reverse(true)
+			}
 		}
 
 		// Draw tab label characters (or inline editor when editing this tab)
@@ -325,8 +354,13 @@ func (tb *TabBar) Draw(painter *core.Painter) {
 				painter.SetCell(x, y, ' ', tabStyle)
 				x++
 			}
-			// Size the editor to fit the original label width, capped at remaining space
-			labelWidth := len([]rune(tab.Label))
+			// Size the editor to fit the current text + cursor, growing as the user types.
+			editLen := len([]rune(tb.editInput.Text())) + 1 // +1 for cursor at end
+			labelLen := len([]rune(tab.Label))
+			labelWidth := editLen
+			if labelLen > labelWidth {
+				labelWidth = labelLen
+			}
 			if labelWidth < 1 {
 				labelWidth = 1
 			}
@@ -356,16 +390,17 @@ func (tb *TabBar) Draw(painter *core.Painter) {
 		// Draw separator between tabs (not after the last tab)
 		if i < len(tb.Tabs)-1 && x < maxX {
 			nextActive := (i + 1) == tb.ActiveIdx
+			curBG := tabBG(i)
+			nextBG := tabBG(i + 1)
 			if isActive {
 				// Leaving active tab: right triangle, FG=active, BG=next tab's BG
-				nextBG := s.InactiveBG
 				painter.SetCell(x, y, plRightTriangle, tcell.StyleDefault.Foreground(s.ActiveBG).Background(nextBG))
 			} else if nextActive {
 				// Entering active tab: left triangle, FG=active, BG=current tab's BG
-				painter.SetCell(x, y, plLeftTriangle, tcell.StyleDefault.Foreground(s.ActiveBG).Background(s.InactiveBG))
+				painter.SetCell(x, y, plLeftTriangle, tcell.StyleDefault.Foreground(s.ActiveBG).Background(curBG))
 			} else {
-				// Between two inactive tabs: thin line separator
-				painter.SetCell(x, y, plRightThinLine, tcell.StyleDefault.Foreground(s.BarBG).Background(s.InactiveBG))
+				// Between two inactive tabs: powerline separator transitioning between colors
+				painter.SetCell(x, y, plRightTriangle, tcell.StyleDefault.Foreground(curBG).Background(nextBG))
 			}
 			x++
 		}
@@ -373,11 +408,7 @@ func (tb *TabBar) Draw(painter *core.Painter) {
 
 	// Trailing right triangle after last tab: FG = last tab's BG, BG = barBG
 	if x < maxX {
-		lastBG := s.InactiveBG
-		if tb.ActiveIdx == len(tb.Tabs)-1 {
-			lastBG = s.ActiveBG
-		}
-		painter.SetCell(x, y, plRightTriangle, tcell.StyleDefault.Foreground(lastBG).Background(s.BarBG))
+		painter.SetCell(x, y, plRightTriangle, tcell.StyleDefault.Foreground(tabBG(len(tb.Tabs)-1)).Background(s.BarBG))
 		x++
 	}
 
@@ -428,7 +459,11 @@ func (tb *TabBar) HandleKey(ev *tcell.EventKey) bool {
 			tb.confirmEdit(tb.editInput.Text())
 			return true
 		default:
-			return tb.editInput.HandleKey(ev)
+			handled := tb.editInput.HandleKey(ev)
+			if handled {
+				tb.invalidate()
+			}
+			return handled
 		}
 	}
 
@@ -496,7 +531,7 @@ func (tb *TabBar) HandleMouse(ev *tcell.EventMouse) bool {
 	}
 
 	// Calculate which tab the mouse is over
-	tabIdx := tb.tabAtX(x)
+	tabIdx := tb.TabAtX(x)
 
 	// Update hover state (only for non-active tabs)
 	if tabIdx != tb.hoverIdx {
@@ -524,9 +559,9 @@ func (tb *TabBar) HandleMouse(ev *tcell.EventMouse) bool {
 	return true
 }
 
-// tabAtX returns the tab index at the given x position, or -1 if none.
+// TabAtX returns the tab index at the given absolute x position, or -1 if none.
 // Layout: [leftTri][" Label "][sep][" Label "][sep]...[rightTri][barBG...]
-func (tb *TabBar) tabAtX(x int) int {
+func (tb *TabBar) TabAtX(x int) int {
 	col := tb.Rect.X
 
 	// Skip leading left triangle

@@ -9,6 +9,7 @@ package widgets
 
 import (
 	"github.com/gdamore/tcell/v2"
+	"github.com/framegrace/texelui/color"
 	"github.com/framegrace/texelui/theme"
 	"github.com/framegrace/texelui/core"
 	"github.com/framegrace/texelui/primitives"
@@ -134,7 +135,7 @@ func NewColorPicker(config ColorPickerConfig) *ColorPicker {
 
 	// Create tab bar — compact mode (no blend row) since it sits on the border
 	cp.tabBar = primitives.NewTabBar(0, 0, 40, tabItems)
-	cp.tabBar.Style.BarBG = theme.Get().GetSemanticColor("bg.surface")
+	cp.tabBar.Style.BarBG = color.Solid(theme.Get().GetSemanticColor("bg.surface"))
 	cp.tabBar.OnChange = func(idx int) {
 		if idx >= 0 && idx < len(cp.modeOrder) {
 			cp.selectModeByIndex(idx)

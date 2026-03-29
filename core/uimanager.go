@@ -3,6 +3,7 @@ package core
 import (
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/framegrace/texelui/theme"
 	"github.com/gdamore/tcell/v2"
@@ -233,6 +234,24 @@ func (u *UIManager) RequestRefresh() {
 	case ch <- true:
 	default:
 	}
+}
+
+// scheduleAnimationRefreshLocked queues a refresh after a short delay so
+// animated dynamic colors keep ticking. Called with u.mu held.
+func (u *UIManager) scheduleAnimationRefreshLocked() {
+	go func() {
+		time.Sleep(16 * time.Millisecond) // ~60fps
+		u.dirtyMu.Lock()
+		u.dirty = append(u.dirty, Rect{X: 0, Y: 0, W: u.W, H: u.H})
+		ch := u.notifier
+		u.dirtyMu.Unlock()
+		if ch != nil {
+			select {
+			case ch <- true:
+			default:
+			}
+		}
+	}()
 }
 
 // BlinkTick calls BlinkTick on all widgets that implement BlinkAware,
@@ -899,6 +918,11 @@ func (u *UIManager) Render() [][]Cell {
 		u.drawModalOverlaysLocked(p)
 		// Draw status bar last (on top)
 		u.drawStatusBarLocked(p)
+		// If any widget drew animated colors, schedule another refresh
+		// so the animation keeps ticking.
+		if p.HasAnimations() {
+			u.scheduleAnimationRefreshLocked()
+		}
 		return u.buf
 	}
 
@@ -940,6 +964,9 @@ func (u *UIManager) Render() [][]Cell {
 		u.drawModalOverlaysLocked(p)
 		// Draw status bar if it intersects clip
 		u.drawStatusBarLocked(p)
+		if p.HasAnimations() {
+			u.scheduleAnimationRefreshLocked()
+		}
 	}
 	return u.buf
 }

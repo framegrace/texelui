@@ -390,9 +390,9 @@ func TestTabBar_TabAtX_Powerline(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := tb.tabAtX(tt.x)
+		got := tb.TabAtX(tt.x)
 		if got != tt.want {
-			t.Errorf("tabAtX(%d) = %d, want %d", tt.x, got, tt.want)
+			t.Errorf("TabAtX(%d) = %d, want %d", tt.x, got, tt.want)
 		}
 	}
 }

@@ -177,8 +177,17 @@ func (p *Painter) SetScreenSize(w, h int) { p.screenW = w; p.screenH = h }
 // SetTime sets the animation time for dynamic color context.
 func (p *Painter) SetTime(t float32) { p.time = t }
 
+// Time returns the current animation time.
+func (p *Painter) Time() float32 { return p.time }
+
 // HasAnimations reports whether any drawn dynamic color was animated.
 func (p *Painter) HasAnimations() bool { return p.hasAnim }
+
+// MarkAnimated signals that this frame contains animated content and the
+// framework should schedule a repaint. Widgets that resolve DynamicColors
+// themselves (via SetCell instead of SetDynamicCell) should call this when
+// any resolved color was animated.
+func (p *Painter) MarkAnimated() { p.hasAnim = true }
 
 // SetDynamicCell writes a cell using a DynamicStyle, resolving colors from context.
 func (p *Painter) SetDynamicCell(x, y int, ch rune, ds color.DynamicStyle) {
