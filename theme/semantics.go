@@ -42,6 +42,16 @@ var StandardSemantics = Section{
 	"border.resizing": "accent_secondary", // Resizing state -> Points to ui.accent_secondary
 	"border.focus":    "accent_secondary", // Focused element ring -> Points to ui.accent_secondary
 
+	// Workspace accent colors (cycling palette for workspace tabs)
+	"workspace.accent.1": "@blue",
+	"workspace.accent.2": "@green",
+	"workspace.accent.3": "@mauve",
+	"workspace.accent.4": "@peach",
+	"workspace.accent.5": "@pink",
+	"workspace.accent.6": "@teal",
+	"workspace.accent.7": "@yellow",
+	"workspace.accent.8": "@lavender",
+
 	// Components specific
 	"caret": "@rosewater", // Input caret
 }
