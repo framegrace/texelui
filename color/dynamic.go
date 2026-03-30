@@ -30,24 +30,51 @@ type ColorFunc func(ctx ColorContext) tcell.Color
 // It captures the animation intent so it can travel across the protocol
 // and be reconstructed on the client side.
 type DynamicColorDesc struct {
-	Type   uint8   // DescTypeNone, DescTypeSolid, DescTypePulse, DescTypeFade
-	Base   uint32  // RGB packed base color
-	Target uint32  // RGB packed target (for fade)
-	Easing uint8   // index into EasingByIndex table
-	Speed  float32 // oscillations/sec (pulse) or duration in seconds (fade)
-	Min    float32 // min scale factor (pulse)
-	Max    float32 // max scale factor (pulse)
+	Type   uint8              // DescTypeNone, DescTypeSolid, DescTypePulse, DescTypeFade, DescTypeLinearGrad, DescTypeRadialGrad
+	Base   uint32             // RGB packed base color
+	Target uint32             // RGB packed target (for fade)
+	Easing uint8              // index into EasingByIndex table
+	Speed  float32            // oscillations/sec (pulse) or duration in seconds (fade)
+	Min    float32            // min scale factor (pulse)
+	Max    float32            // max scale factor (pulse)
+	Stops  []GradientStopDesc // nil for non-gradient types
 }
 
 const (
-	DescTypeNone  uint8 = 0
-	DescTypeSolid uint8 = 1
-	DescTypePulse uint8 = 2
-	DescTypeFade  uint8 = 3
+	DescTypeNone       uint8 = 0
+	DescTypeSolid      uint8 = 1
+	DescTypePulse      uint8 = 2
+	DescTypeFade       uint8 = 3
+	DescTypeLinearGrad uint8 = 4
+	DescTypeRadialGrad uint8 = 5
 )
+
+// GradientStopDesc describes a single stop in a gradient descriptor.
+type GradientStopDesc struct {
+	Position float32
+	Color    DynamicColorDesc // Solid, Pulse, or Fade — no nested gradients
+}
 
 // IsAnimated returns true if this descriptor represents an animated color.
 func (d DynamicColorDesc) IsAnimated() bool {
+	if d.Type >= DescTypePulse && d.Type <= DescTypeFade {
+		return true
+	}
+	for _, s := range d.Stops {
+		if s.Color.IsAnimated() {
+			return true
+		}
+	}
+	return false
+}
+
+// IsGradient returns true if this descriptor represents a gradient.
+func (d DynamicColorDesc) IsGradient() bool {
+	return d.Type == DescTypeLinearGrad || d.Type == DescTypeRadialGrad
+}
+
+// IsDynamic returns true if this descriptor is non-trivial (not None or Solid).
+func (d DynamicColorDesc) IsDynamic() bool {
 	return d.Type >= DescTypePulse
 }
 
