@@ -189,6 +189,73 @@ func TestDynamicColorDesc_FadeRoundTrip(t *testing.T) {
 	}
 }
 
+func TestDynamicColorDesc_LinearGradient(t *testing.T) {
+	grad := Linear(0, Stop(0, tcell.NewRGBColor(255, 0, 0)), Stop(1, tcell.NewRGBColor(0, 0, 255))).WithLocal().Build()
+	desc := grad.Describe()
+	if desc.Type != DescTypeLinearGrad {
+		t.Fatalf("expected DescTypeLinearGrad, got %d", desc.Type)
+	}
+	if len(desc.Stops) != 2 {
+		t.Fatalf("expected 2 stops, got %d", len(desc.Stops))
+	}
+	if desc.Stops[0].Color.Type != DescTypeSolid {
+		t.Errorf("stop 0 should be solid, got %d", desc.Stops[0].Color.Type)
+	}
+}
+
+func TestDynamicColorDesc_LinearGradientRoundTrip(t *testing.T) {
+	original := Linear(45, Stop(0, tcell.NewRGBColor(255, 0, 0)), Stop(1, tcell.NewRGBColor(0, 0, 255))).WithLocal().Build()
+	desc := original.Describe()
+	reconstructed := FromDesc(desc)
+
+	ctx := ColorContext{X: 5, Y: 0, W: 10, H: 1}
+	origColor := original.Resolve(ctx)
+	reconColor := reconstructed.Resolve(ctx)
+	if origColor != reconColor {
+		t.Errorf("round-trip mismatch at X=5: original=%v reconstructed=%v", origColor, reconColor)
+	}
+}
+
+func TestDynamicColorDesc_GradientWithPulseStop(t *testing.T) {
+	pulse := Pulse(tcell.NewRGBColor(137, 180, 250), 0.7, 1.0, 6)
+	grad := Linear(0, DynStop(0, pulse), Stop(1, tcell.NewRGBColor(30, 30, 46))).WithLocal().Build()
+	desc := grad.Describe()
+	if desc.Type != DescTypeLinearGrad {
+		t.Fatalf("expected DescTypeLinearGrad, got %d", desc.Type)
+	}
+	if desc.Stops[0].Color.Type != DescTypePulse {
+		t.Errorf("stop 0 should be pulse, got %d", desc.Stops[0].Color.Type)
+	}
+	if !desc.IsAnimated() {
+		t.Error("gradient with Pulse stop should be animated")
+	}
+
+	// Round-trip
+	reconstructed := FromDesc(desc)
+	ctx := ColorContext{X: 0, Y: 0, W: 10, H: 1, T: 0.5}
+	origColor := grad.Resolve(ctx)
+	reconColor := reconstructed.Resolve(ctx)
+	if origColor != reconColor {
+		t.Errorf("round-trip mismatch: original=%v reconstructed=%v", origColor, reconColor)
+	}
+}
+
+func TestDynamicColorDesc_RadialGradientRoundTrip(t *testing.T) {
+	original := Radial(0.5, 0.5, Stop(0, tcell.NewRGBColor(255, 255, 200)), Stop(1, tcell.NewRGBColor(20, 20, 80))).WithLocal().Build()
+	desc := original.Describe()
+	if desc.Type != DescTypeRadialGrad {
+		t.Fatalf("expected DescTypeRadialGrad, got %d", desc.Type)
+	}
+	reconstructed := FromDesc(desc)
+
+	ctx := ColorContext{X: 5, Y: 5, W: 10, H: 10}
+	origColor := original.Resolve(ctx)
+	reconColor := reconstructed.Resolve(ctx)
+	if origColor != reconColor {
+		t.Errorf("round-trip mismatch: original=%v reconstructed=%v", origColor, reconColor)
+	}
+}
+
 func packRGBTest(r, g, b int32) uint32 {
 	return (uint32(r)&0xFF)<<16 | (uint32(g)&0xFF)<<8 | uint32(b)&0xFF
 }

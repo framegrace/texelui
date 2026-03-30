@@ -235,6 +235,31 @@ func FromDesc(d DynamicColorDesc) DynamicColor {
 			}
 		}
 		return Fade(tcell.NewRGBColor(fr, ffg, fb), tcell.NewRGBColor(tr, tg, tb), easingName, d.Speed)
+	case DescTypeLinearGrad:
+		angleDeg := math.Float32frombits(d.Base)
+		source := coordSource(d.Easing)
+		stops := make([]ColorStop, len(d.Stops))
+		for i, sd := range d.Stops {
+			stops[i] = ColorStop{
+				Position: sd.Position,
+				Dynamic:  FromDesc(sd.Color),
+			}
+		}
+		return Linear(angleDeg, stops...).withSource(source).Build()
+
+	case DescTypeRadialGrad:
+		cx := d.Speed
+		cy := math.Float32frombits(d.Target)
+		source := coordSource(d.Easing)
+		stops := make([]ColorStop, len(d.Stops))
+		for i, sd := range d.Stops {
+			stops[i] = ColorStop{
+				Position: sd.Position,
+				Dynamic:  FromDesc(sd.Color),
+			}
+		}
+		return Radial(cx, cy, stops...).withSource(source).Build()
+
 	default:
 		return DynamicColor{}
 	}
