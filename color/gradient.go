@@ -16,12 +16,18 @@ import (
 // ColorStop defines a color at a specific position along a gradient.
 type ColorStop struct {
 	Color    tcell.Color
-	Position float32 // 0.0 to 1.0
+	Dynamic  DynamicColor // if set, resolved at draw time instead of Color
+	Position float32      // 0.0 to 1.0
 }
 
 // Stop creates a ColorStop at the given position with the given color.
 func Stop(position float32, c tcell.Color) ColorStop {
 	return ColorStop{Color: c, Position: position}
+}
+
+// DynStop creates a ColorStop from a DynamicColor, resolved at draw time.
+func DynStop(position float32, dc DynamicColor) ColorStop {
+	return ColorStop{Dynamic: dc, Position: position}
 }
 
 // coordSource selects which coordinate system to use for gradient computation.
@@ -116,11 +122,18 @@ func (gb GradientBuilder) Build() DynamicColor {
 	})
 }
 
-// prepareStops converts ColorStops to oklchStops, sorted by position.
-func prepareStops(stops []ColorStop) []oklchStop {
-	if len(stops) == 0 {
-		return nil
+// hasDynamicStops reports whether any stop uses a DynamicColor.
+func hasDynamicStops(stops []ColorStop) bool {
+	for _, s := range stops {
+		if !s.Dynamic.IsZero() {
+			return true
+		}
 	}
+	return false
+}
+
+// resolveStops resolves DynamicColor stops with the given context, then converts to oklchStops.
+func resolveStops(stops []ColorStop, ctx ColorContext) []oklchStop {
 	sorted := make([]ColorStop, len(stops))
 	copy(sorted, stops)
 	sort.Slice(sorted, func(i, j int) bool {
@@ -129,10 +142,19 @@ func prepareStops(stops []ColorStop) []oklchStop {
 
 	out := make([]oklchStop, len(sorted))
 	for i, s := range sorted {
-		l, c, h := TcellToOKLCH(s.Color)
-		out[i] = oklchStop{L: l, C: c, H: h, position: float64(s.Position)}
+		c := s.Color
+		if !s.Dynamic.IsZero() {
+			c = s.Dynamic.Resolve(ctx)
+		}
+		l, ch, h := TcellToOKLCH(c)
+		out[i] = oklchStop{L: l, C: ch, H: h, position: float64(s.Position)}
 	}
 	return out
+}
+
+// prepareStops converts static ColorStops to oklchStops, sorted by position.
+func prepareStops(stops []ColorStop) []oklchStop {
+	return resolveStops(stops, ColorContext{})
 }
 
 // normalizedCoords returns (nx, ny) in [0,1] based on the coordinate source.
