@@ -389,17 +389,13 @@ func (tb *TabBar) Draw(painter *core.Painter) {
 
 		// Draw separator between tabs (not after the last tab)
 		if i < len(tb.Tabs)-1 && x < maxX {
-			nextActive := (i + 1) == tb.ActiveIdx
 			curBG := tabBG(i)
 			nextBG := tabBG(i + 1)
-			if isActive {
-				// Leaving active tab: right triangle, FG=active, BG=next tab's BG
-				painter.SetCell(x, y, plRightTriangle, tcell.StyleDefault.Foreground(s.ActiveBG).Background(nextBG))
-			} else if nextActive {
-				// Entering active tab: left triangle, FG=active, BG=current tab's BG
-				painter.SetCell(x, y, plLeftTriangle, tcell.StyleDefault.Foreground(s.ActiveBG).Background(curBG))
+			if i < tb.ActiveIdx {
+				// Left of active (including entering active): plLeftTriangle, FG=right, BG=left
+				painter.SetCell(x, y, plLeftTriangle, tcell.StyleDefault.Foreground(nextBG).Background(curBG))
 			} else {
-				// Between two inactive tabs: powerline separator transitioning between colors
+				// Active and right of active: plRightTriangle, FG=left, BG=right
 				painter.SetCell(x, y, plRightTriangle, tcell.StyleDefault.Foreground(curBG).Background(nextBG))
 			}
 			x++

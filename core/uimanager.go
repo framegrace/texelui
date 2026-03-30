@@ -246,6 +246,8 @@ func (u *UIManager) scheduleAnimationRefreshLocked() {
 		ch := u.notifier
 		u.dirtyMu.Unlock()
 		if ch != nil {
+			// Guard against closed channel (app shutting down).
+			defer func() { recover() }()
 			select {
 			case ch <- true:
 			default:
