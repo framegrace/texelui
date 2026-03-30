@@ -213,10 +213,10 @@ func (p *Painter) SetDynamicCell(x, y int, ch rune, ds color.DynamicStyle) {
 			style = style.Attributes(ds.Attrs)
 		}
 		cell := Cell{Ch: ch, Style: style}
-		if fgDesc := ds.FG.Describe(); fgDesc.IsAnimated() {
+		if fgDesc := ds.FG.Describe(); fgDesc.IsDynamic() {
 			cell.DynFG = fgDesc
 		}
-		if bgDesc := ds.BG.Describe(); bgDesc.IsAnimated() {
+		if bgDesc := ds.BG.Describe(); bgDesc.IsDynamic() {
 			cell.DynBG = bgDesc
 		}
 		p.buf[y][x] = cell
@@ -246,10 +246,10 @@ func (p *Painter) SetDynamicCell(x, y int, ch rune, ds color.DynamicStyle) {
 		style = style.Attributes(ds.Attrs)
 	}
 	cell := Cell{Ch: ch, Style: style}
-	if fgDesc := ds.FG.Describe(); fgDesc.IsAnimated() {
+	if fgDesc := ds.FG.Describe(); fgDesc.IsDynamic() {
 		cell.DynFG = fgDesc
 	}
-	if bgDesc := ds.BG.Describe(); bgDesc.IsAnimated() {
+	if bgDesc := ds.BG.Describe(); bgDesc.IsDynamic() {
 		cell.DynBG = bgDesc
 	}
 	p.buf[y][x] = cell
@@ -294,7 +294,7 @@ func (p *Painter) SetDynamicCellKeepBG(x, y int, ch rune, ds color.DynamicStyle)
 		style = style.Attributes(ds.Attrs)
 	}
 	cell := Cell{Ch: ch, Style: style}
-	if fgDesc := ds.FG.Describe(); fgDesc.IsAnimated() {
+	if fgDesc := ds.FG.Describe(); fgDesc.IsDynamic() {
 		cell.DynFG = fgDesc
 	}
 	p.buf[y][x] = cell
