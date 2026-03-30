@@ -52,6 +52,11 @@ type UIManager struct {
 
 	// Graphics provider for image rendering (Kitty protocol, etc.)
 	graphicsProvider GraphicsProvider
+
+	// ClientSideAnimations suppresses server-side animation refresh scheduling.
+	// When true, HasAnimations() does NOT trigger scheduleAnimationRefreshLocked.
+	// The client handles animation refresh instead.
+	ClientSideAnimations bool
 }
 
 func NewUIManager() *UIManager {
@@ -922,7 +927,7 @@ func (u *UIManager) Render() [][]Cell {
 		u.drawStatusBarLocked(p)
 		// If any widget drew animated colors, schedule another refresh
 		// so the animation keeps ticking.
-		if p.HasAnimations() {
+		if p.HasAnimations() && !u.ClientSideAnimations {
 			u.scheduleAnimationRefreshLocked()
 		}
 		return u.buf
@@ -966,7 +971,7 @@ func (u *UIManager) Render() [][]Cell {
 		u.drawModalOverlaysLocked(p)
 		// Draw status bar if it intersects clip
 		u.drawStatusBarLocked(p)
-		if p.HasAnimations() {
+		if p.HasAnimations() && !u.ClientSideAnimations {
 			u.scheduleAnimationRefreshLocked()
 		}
 	}
