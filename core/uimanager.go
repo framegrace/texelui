@@ -57,6 +57,9 @@ type UIManager struct {
 	// When true, HasAnimations() does NOT trigger scheduleAnimationRefreshLocked.
 	// The client handles animation refresh instead.
 	ClientSideAnimations bool
+
+	// animStart tracks when the UIManager was created, for DynamicColor animation time.
+	animStart time.Time
 }
 
 func NewUIManager() *UIManager {
@@ -67,6 +70,7 @@ func NewUIManager() *UIManager {
 		bgStyle:             tcell.StyleDefault.Background(bg).Foreground(fg),
 		AdvanceFocusOnEnter: true, // Enable by default for form-style data entry
 		statusBarHeight:     2,    // Default: 1 separator + 1 content row
+		animStart:           time.Now(),
 	}
 }
 
@@ -917,6 +921,7 @@ func (u *UIManager) Render() [][]Cell {
 		// No specific dirty regions requested: compose full frame.
 		full := Rect{X: 0, Y: 0, W: u.W, H: u.H}
 		p := NewPainterWithGraphics(u.buf, full, u.graphicsProvider)
+		p.SetTime(float32(time.Since(u.animStart).Seconds()))
 		p.Fill(full, ' ', u.bgStyle)
 		for _, w := range sorted {
 			w.Draw(p)
@@ -956,6 +961,7 @@ func (u *UIManager) Render() [][]Cell {
 		}
 
 		p := NewPainterWithGraphics(u.buf, clip, u.graphicsProvider)
+		p.SetTime(float32(time.Since(u.animStart).Seconds()))
 		// Clear dirty region
 		p.Fill(clip, ' ', u.bgStyle)
 		// Draw widgets intersecting clip
