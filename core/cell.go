@@ -7,11 +7,16 @@
 
 package core
 
-import "github.com/gdamore/tcell/v2"
+import (
+	"github.com/framegrace/texelui/color"
+	"github.com/gdamore/tcell/v2"
+)
 
 // Cell represents a single character cell on the terminal screen.
 // It now uses tcell.Style to handle all formatting.
 type Cell struct {
 	Ch    rune
 	Style tcell.Style
+	DynFG color.DynamicColorDesc // zero Type = use Style fg
+	DynBG color.DynamicColorDesc // zero Type = use Style bg
 }
