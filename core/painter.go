@@ -293,7 +293,7 @@ func (p *Painter) SetDynamicCellKeepBG(x, y int, ch rune, ds color.DynamicStyle)
 	if ds.Attrs != 0 {
 		style = style.Attributes(ds.Attrs)
 	}
-	cell := Cell{Ch: ch, Style: style}
+	cell := Cell{Ch: ch, Style: style, DynBG: p.buf[y][x].DynBG}
 	if fgDesc := ds.FG.Describe(); fgDesc.IsDynamic() {
 		cell.DynFG = fgDesc
 	}
