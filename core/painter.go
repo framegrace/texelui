@@ -212,7 +212,14 @@ func (p *Painter) SetDynamicCell(x, y int, ch rune, ds color.DynamicStyle) {
 		if ds.Attrs != 0 {
 			style = style.Attributes(ds.Attrs)
 		}
-		p.buf[y][x] = Cell{Ch: ch, Style: style}
+		cell := Cell{Ch: ch, Style: style}
+		if fgDesc := ds.FG.Describe(); fgDesc.IsAnimated() {
+			cell.DynFG = fgDesc
+		}
+		if bgDesc := ds.BG.Describe(); bgDesc.IsAnimated() {
+			cell.DynBG = bgDesc
+		}
+		p.buf[y][x] = cell
 		return
 	}
 
@@ -238,7 +245,14 @@ func (p *Painter) SetDynamicCell(x, y int, ch rune, ds color.DynamicStyle) {
 	if ds.Attrs != 0 {
 		style = style.Attributes(ds.Attrs)
 	}
-	p.buf[y][x] = Cell{Ch: ch, Style: style}
+	cell := Cell{Ch: ch, Style: style}
+	if fgDesc := ds.FG.Describe(); fgDesc.IsAnimated() {
+		cell.DynFG = fgDesc
+	}
+	if bgDesc := ds.BG.Describe(); bgDesc.IsAnimated() {
+		cell.DynBG = bgDesc
+	}
+	p.buf[y][x] = cell
 }
 
 // SetDynamicCellKeepBG writes a character with dynamic FG but preserves existing BG.
@@ -279,7 +293,11 @@ func (p *Painter) SetDynamicCellKeepBG(x, y int, ch rune, ds color.DynamicStyle)
 	if ds.Attrs != 0 {
 		style = style.Attributes(ds.Attrs)
 	}
-	p.buf[y][x] = Cell{Ch: ch, Style: style}
+	cell := Cell{Ch: ch, Style: style}
+	if fgDesc := ds.FG.Describe(); fgDesc.IsAnimated() {
+		cell.DynFG = fgDesc
+	}
+	p.buf[y][x] = cell
 }
 
 // DrawDynamicTextKeepBG draws text with dynamic FG preserving existing BG.
