@@ -20,7 +20,8 @@ type ColorContext struct {
 	PW, PH int     // Pane dimensions
 	SX, SY int     // Screen-absolute coordinates
 	SW, SH int     // Screen dimensions
-	T      float32 // Animation time
+	T      float32 // Animation time in seconds (accumulated from deltas)
+	DT     float32 // Delta time this frame in seconds (0 for data-driven renders)
 }
 
 // ColorFunc computes a color from spatial and temporal context.
