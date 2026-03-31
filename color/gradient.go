@@ -43,6 +43,7 @@ const (
 type oklchStop struct {
 	L, C, H  float64
 	position float64
+	rgb      tcell.Color // original RGB, avoids OKLCH round-trip at stop boundaries
 }
 
 // GradientBuilder configures and builds gradient DynamicColors.
@@ -230,7 +231,7 @@ func resolveStops(stops []ColorStop, ctx ColorContext) []oklchStop {
 			c = s.Dynamic.Resolve(ctx)
 		}
 		l, ch, h := TcellToOKLCH(c)
-		out[i] = oklchStop{L: l, C: ch, H: h, position: float64(s.Position)}
+		out[i] = oklchStop{L: l, C: ch, H: h, position: float64(s.Position), rgb: c}
 	}
 	return out
 }
@@ -260,13 +261,14 @@ func normalizedCoords(ctx ColorContext, source coordSource) (float64, float64) {
 }
 
 // interpolateStops finds the two surrounding stops and interpolates between them.
+// Returns the original RGB at stop boundaries to avoid OKLCH round-trip color shift.
 func interpolateStops(stops []oklchStop, t float64) tcell.Color {
 	if t <= stops[0].position {
-		return OKLCHToTcell(stops[0].L, stops[0].C, stops[0].H)
+		return stops[0].rgb
 	}
 	last := stops[len(stops)-1]
 	if t >= last.position {
-		return OKLCHToTcell(last.L, last.C, last.H)
+		return last.rgb
 	}
 
 	for i := 1; i < len(stops); i++ {
@@ -275,9 +277,16 @@ func interpolateStops(stops []oklchStop, t float64) tcell.Color {
 			b := stops[i]
 			span := b.position - a.position
 			if span <= 0 {
-				return OKLCHToTcell(a.L, a.C, a.H)
+				return a.rgb
 			}
 			f := (t - a.position) / span
+			// At exact stop boundaries, return original RGB.
+			if f <= 0 {
+				return a.rgb
+			}
+			if f >= 1 {
+				return b.rgb
+			}
 			L := a.L + (b.L-a.L)*f
 			C := a.C + (b.C-a.C)*f
 			H := lerpHue(a.H, b.H, f)
@@ -285,7 +294,7 @@ func interpolateStops(stops []oklchStop, t float64) tcell.Color {
 		}
 	}
 
-	return OKLCHToTcell(last.L, last.C, last.H)
+	return last.rgb
 }
 
 // lerpHue interpolates between two hue angles using the shortest arc around 360.
