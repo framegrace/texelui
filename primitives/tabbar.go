@@ -246,85 +246,66 @@ func (tb *TabBar) ActiveTab() TabItem {
 	return TabItem{}
 }
 
-// resolvedTabBarColors holds static colors resolved from DynamicColor fields for one frame.
-type resolvedTabBarColors struct {
-	ActiveBG   tcell.Color
-	ActiveFG   tcell.Color
-	InactiveBG tcell.Color
-	InactiveFG tcell.Color
-	BarBG      tcell.Color
-	ContentBG  tcell.Color
-}
-
-// resolveColors resolves all DynamicColor fields to concrete colors for the current frame.
-func (tb *TabBar) resolveColors(ctx color.ColorContext) resolvedTabBarColors {
-	s := tb.Style
-	tm := theme.Get()
-	resolve := func(dc color.DynamicColor, fallback string) tcell.Color {
-		if dc.IsZero() {
-			return tm.GetSemanticColor(fallback)
-		}
-		return dc.Resolve(ctx)
-	}
-	return resolvedTabBarColors{
-		ActiveBG:   resolve(s.ActiveBG, "accent"),
-		ActiveFG:   resolve(s.ActiveFG, "text.inverse"),
-		InactiveBG: resolve(s.InactiveBG, "bg.surface"),
-		InactiveFG: resolve(s.InactiveFG, "text.muted"),
-		BarBG:      resolve(s.BarBG, "bg.mantle"),
-		ContentBG:  resolve(s.ContentBG, "bg.surface"),
-	}
-}
-
 // Draw renders the tab bar with powerline-style separators.
 func (tb *TabBar) Draw(painter *core.Painter) {
 	if len(tb.Tabs) == 0 {
 		return
 	}
 
-	// Build color context for resolving dynamic colors this frame.
-	ctx := color.ColorContext{
-		X: tb.Rect.X, Y: tb.Rect.Y,
-		W: tb.Rect.W, H: tb.Rect.H,
-		T: painter.Time(),
+	// Resolve style DynamicColors, falling back to theme defaults for unset fields.
+	tm := theme.Get()
+	dynResolve := func(dc color.DynamicColor, fallback string) color.DynamicColor {
+		if dc.IsZero() {
+			return color.Solid(tm.GetSemanticColor(fallback))
+		}
+		return dc
 	}
-	s := tb.resolveColors(ctx)
+	activeBG := dynResolve(tb.Style.ActiveBG, "accent")
+	activeFG := dynResolve(tb.Style.ActiveFG, "text.inverse")
+	inactiveBG := dynResolve(tb.Style.InactiveBG, "bg.surface")
+	barBG := dynResolve(tb.Style.BarBG, "bg.mantle")
+	contentBG := dynResolve(tb.Style.ContentBG, "bg.surface")
+
 	// If any style color is dynamic (non-static), mark the painter as animated
 	// so the framework auto-refreshes.
-	if !tb.Style.ActiveBG.IsStatic() || !tb.Style.ActiveFG.IsStatic() ||
-		!tb.Style.InactiveBG.IsStatic() || !tb.Style.InactiveFG.IsStatic() ||
-		!tb.Style.BarBG.IsStatic() || !tb.Style.ContentBG.IsStatic() {
+	if !activeBG.IsStatic() || !activeFG.IsStatic() ||
+		!inactiveBG.IsStatic() || !barBG.IsStatic() {
 		painter.MarkAnimated()
 	}
+
 	focused := tb.IsFocused()
 	x := tb.Rect.X
 	y := tb.Rect.Y
 	maxX := tb.Rect.X + tb.Rect.W
 
-	tm := theme.Get()
-	activeStyle := tcell.StyleDefault.Foreground(s.ActiveFG).Background(s.ActiveBG)
-	// Inactive tabs: normal text when bar unfocused, accent FG when bar focused
-	inactiveFG := tm.GetSemanticColor("text.primary")
+	// Build DynamicStyles for each visual element.
+	activeDS := color.DynamicStyle{FG: activeFG, BG: activeBG}
 	if focused {
-		inactiveFG = s.ActiveBG // accent color
+		activeDS.Attrs = tcell.AttrBold
 	}
-	barStyle := tcell.StyleDefault.Foreground(s.BarBG).Background(s.BarBG)
+	barDS := color.DynamicStyle{FG: barBG, BG: barBG}
 
-	// tabBG returns the background color for tab i.
-	tabBG := func(i int) tcell.Color {
+	// Inactive tabs: normal text when bar unfocused, accent FG when bar focused.
+	inactFG := color.Solid(tm.GetSemanticColor("text.primary"))
+	if focused {
+		inactFG = activeBG
+	}
+
+	// tabDynBG returns the DynamicColor for tab i's background.
+	tabDynBG := func(i int) color.DynamicColor {
 		if i == tb.ActiveIdx {
-			return s.ActiveBG
+			return activeBG
 		}
 		if i >= 0 && i < len(tb.Tabs) && !tb.Tabs[i].Color.IsZero() {
-			return tb.Tabs[i].Color.Resolve(ctx)
+			return tb.Tabs[i].Color
 		}
-		return s.InactiveBG
+		return inactiveBG
 	}
 
 	// Row 0: powerline tab row
 	// Leading left triangle: FG = first tab's BG, BG = barBG
 	if x < maxX {
-		painter.SetCell(x, y, plLeftTriangle, tcell.StyleDefault.Foreground(tabBG(0)).Background(s.BarBG))
+		painter.SetDynamicCell(x, y, plLeftTriangle, color.DynamicStyle{FG: tabDynBG(0), BG: barBG})
 		x++
 	}
 
@@ -333,29 +314,23 @@ func (tb *TabBar) Draw(painter *core.Painter) {
 		isActive := i == tb.ActiveIdx
 		isHover := i == tb.hoverIdx && !isActive
 
-		bg := tabBG(i)
-		var tabStyle tcell.Style
+		var ds color.DynamicStyle
 		if isActive {
-			tabStyle = activeStyle
-			if focused {
-				tabStyle = tabStyle.Bold(true)
-			}
+			ds = activeDS
 		} else {
-			tabStyle = tcell.StyleDefault.Foreground(inactiveFG).Background(bg)
+			ds = color.DynamicStyle{FG: inactFG, BG: tabDynBG(i)}
 			if isHover {
-				tabStyle = tabStyle.Reverse(true)
+				ds.Attrs = tcell.AttrReverse
 			}
 		}
 
 		// Draw tab label characters (or inline editor when editing this tab)
 		if tb.editIdx == i && tb.editInput != nil {
-			// Draw leading space with tab style
 			if x < maxX {
-				painter.SetCell(x, y, ' ', tabStyle)
+				painter.SetDynamicCell(x, y, ' ', ds)
 				x++
 			}
-			// Size the editor to fit the current text + cursor, growing as the user types.
-			editLen := len([]rune(tb.editInput.Text())) + 1 // +1 for cursor at end
+			editLen := len([]rune(tb.editInput.Text())) + 1
 			labelLen := len([]rune(tab.Label))
 			labelWidth := editLen
 			if labelLen > labelWidth {
@@ -369,12 +344,17 @@ func (tb *TabBar) Draw(painter *core.Painter) {
 				inputW = maxX - x
 			}
 			if inputW > 0 {
-				tb.editInput.Draw(painter, x, y, inputW, tabStyle)
+				// Editor still uses static style (it draws its own cells)
+				ctx := color.ColorContext{T: painter.Time()}
+				editStyle := tcell.StyleDefault.Foreground(ds.FG.Resolve(ctx)).Background(ds.BG.Resolve(ctx))
+				if ds.Attrs != 0 {
+					editStyle = editStyle.Attributes(ds.Attrs)
+				}
+				tb.editInput.Draw(painter, x, y, inputW, editStyle)
 				x += inputW
 			}
-			// Draw trailing space with tab style
 			if x < maxX {
-				painter.SetCell(x, y, ' ', tabStyle)
+				painter.SetDynamicCell(x, y, ' ', ds)
 				x++
 			}
 		} else {
@@ -382,56 +362,60 @@ func (tb *TabBar) Draw(painter *core.Painter) {
 				if x >= maxX {
 					break
 				}
-				painter.SetCell(x, y, ch, tabStyle)
+				painter.SetDynamicCell(x, y, ch, ds)
 				x++
 			}
 		}
 
-		// Draw separator between tabs (not after the last tab)
+		// Powerline separator between tabs
 		if i < len(tb.Tabs)-1 && x < maxX {
-			curBG := tabBG(i)
-			nextBG := tabBG(i + 1)
+			curBG := tabDynBG(i)
+			nextBG := tabDynBG(i + 1)
 			if i < tb.ActiveIdx {
-				// Left of active (including entering active): plLeftTriangle, FG=right, BG=left
-				painter.SetCell(x, y, plLeftTriangle, tcell.StyleDefault.Foreground(nextBG).Background(curBG))
+				painter.SetDynamicCell(x, y, plLeftTriangle, color.DynamicStyle{FG: nextBG, BG: curBG})
 			} else {
-				// Active and right of active: plRightTriangle, FG=left, BG=right
-				painter.SetCell(x, y, plRightTriangle, tcell.StyleDefault.Foreground(curBG).Background(nextBG))
+				painter.SetDynamicCell(x, y, plRightTriangle, color.DynamicStyle{FG: curBG, BG: nextBG})
 			}
 			x++
 		}
 	}
 
-	// Trailing right triangle after last tab: FG = last tab's BG, BG = barBG
+	// Trailing right triangle
 	if x < maxX {
-		painter.SetCell(x, y, plRightTriangle, tcell.StyleDefault.Foreground(tabBG(len(tb.Tabs)-1)).Background(s.BarBG))
+		painter.SetDynamicCell(x, y, plRightTriangle, color.DynamicStyle{FG: tabDynBG(len(tb.Tabs) - 1), BG: barBG})
 		x++
 	}
 
-	// Remember where tabs end for the blend line gradient
 	tabsEndX := x
 
 	// Fill rest of row 0 with bar background
 	for x < maxX {
-		painter.SetCell(x, y, ' ', barStyle)
+		painter.SetDynamicCell(x, y, ' ', barDS)
 		x++
 	}
 
-	// Row 1: blend line with 3-stop gradient
-	// accent → accent (at tab end %) → contentBG (at 100%)
+	// Row 1: blend line — accent under tabs, then gradient fade to content BG.
 	if !tb.Style.NoBlendRow && tb.Rect.H >= 2 {
-		// Calculate the tab-end position as a percentage of total width
-		tabEndPct := float32(tabsEndX-tb.Rect.X) / float32(max(tb.Rect.W, 1))
-		blendFG := color.Linear(0,
-			color.Stop(0, s.ActiveBG),
-			color.Stop(tabEndPct, s.ActiveBG),
-			color.Stop(1, s.ContentBG),
-		).WithLocal().Build()
-
-		blendDS := color.DynamicStyle{FG: blendFG, BG: color.Solid(s.ContentBG)}
 		blendY := y + 1
-		for bx := tb.Rect.X; bx < maxX; bx++ {
-			painter.SetDynamicCell(bx, blendY, blendChar, blendDS)
+		// Under tabs: use activeBG directly so Pulse descriptors propagate.
+		accentDS := color.DynamicStyle{FG: activeBG, BG: contentBG}
+		for bx := tb.Rect.X; bx < tabsEndX && bx < maxX; bx++ {
+			painter.SetDynamicCell(bx, blendY, blendChar, accentDS)
+		}
+		// After tabs: gradient fade from accent to content BG (spatial, static).
+		fadeW := maxX - tabsEndX
+		if fadeW > 0 {
+			ctx := color.ColorContext{T: painter.Time()}
+			resolvedAccent := activeBG.Resolve(ctx)
+			resolvedContent := contentBG.Resolve(ctx)
+			fadeFG := color.Linear(0,
+				color.Stop(0, resolvedAccent),
+				color.Stop(1, resolvedContent),
+			).WithLocal().Build()
+			fadeDS := color.DynamicStyle{FG: fadeFG, BG: color.Solid(resolvedContent)}
+			for bx := tabsEndX; bx < maxX; bx++ {
+				painter.SetDynamicCell(bx, blendY, blendChar, fadeDS)
+			}
 		}
 	}
 }
