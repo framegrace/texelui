@@ -177,11 +177,10 @@ func (tl *Timeline) IsAnimating(key any, now time.Time) bool {
 // HasActiveAnimations returns true if any key is currently animating
 // This method still exists for convenience but should be used sparingly.
 // Prefer checking specific keys with IsAnimating when possible for better performance.
-func (tl *Timeline) HasActiveAnimations() bool {
+func (tl *Timeline) HasActiveAnimations(now time.Time) bool {
 	tl.mu.RLock()
 	defer tl.mu.RUnlock()
 
-	now := time.Now()
 	for _, state := range tl.states {
 		if state.duration > 0 && now.Sub(state.startTime) < state.duration {
 			if state.current != state.target {

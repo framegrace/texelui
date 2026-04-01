@@ -20,7 +20,8 @@ type ColorContext struct {
 	PW, PH int     // Pane dimensions
 	SX, SY int     // Screen-absolute coordinates
 	SW, SH int     // Screen dimensions
-	T      float32 // Animation time
+	T      float32 // Animation time in seconds (accumulated from deltas)
+	DT     float32 // Delta time this frame in seconds (0 for data-driven renders)
 }
 
 // ColorFunc computes a color from spatial and temporal context.
@@ -165,12 +166,13 @@ func Pulse(base tcell.Color, min, max, speedHz float32) DynamicColor {
 		Max:   max,
 	}
 	fr, fg, fb := float64(r), float64(g), float64(b)
+	mid := float64(min+max) / 2
+	amp := float64(max-min) / 2
+	speedF := float64(speedHz)
 	return DynamicColor{
 		static: base,
 		fn: func(ctx ColorContext) tcell.Color {
-			mid := float64(min+max) / 2
-			amp := float64(max-min) / 2
-			factor := mid + amp*math.Sin(float64(ctx.T)*float64(speedHz))
+			factor := mid + amp*math.Sin(float64(ctx.T)*speedF)
 			return tcell.NewRGBColor(
 				clamp8(int32(fr*factor)),
 				clamp8(int32(fg*factor)),
