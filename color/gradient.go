@@ -155,35 +155,51 @@ func (gb GradientBuilder) Build() DynamicColor {
 	var fn ColorFunc
 	if gb.linear {
 		angleDeg := gb.angleDeg
+		rad := float64(angleDeg) * math.Pi / 180.0
+		cosA, sinA := math.Cos(rad), math.Sin(rad)
 		if hasDyn {
+			sortBuf := make([]ColorStop, len(capturedStops))
+			oklchBuf := make([]oklchStop, len(capturedStops))
 			fn = func(ctx ColorContext) tcell.Color {
-				resolved := resolveStops(capturedStops, ctx)
+				resolved := resolveStopsInto(capturedStops, ctx, sortBuf, oklchBuf)
 				nx, ny := normalizedCoords(ctx, source)
-				rad := float64(angleDeg) * math.Pi / 180.0
-				t := nx*math.Cos(rad) + ny*math.Sin(rad)
-				t = clampFloat(t, 0, 1)
+				t := nx*cosA + ny*sinA
+				if t < 0 {
+					t = 0
+				} else if t > 1 {
+					t = 1
+				}
 				return interpolateStops(resolved, t)
 			}
 		} else {
 			static := prepareStops(capturedStops)
 			fn = func(ctx ColorContext) tcell.Color {
 				nx, ny := normalizedCoords(ctx, source)
-				rad := float64(angleDeg) * math.Pi / 180.0
-				t := nx*math.Cos(rad) + ny*math.Sin(rad)
-				t = clampFloat(t, 0, 1)
+				t := nx*cosA + ny*sinA
+				if t < 0 {
+					t = 0
+				} else if t > 1 {
+					t = 1
+				}
 				return interpolateStops(static, t)
 			}
 		}
 	} else {
 		cx, cy := gb.cx, gb.cy
 		if hasDyn {
+			sortBuf := make([]ColorStop, len(capturedStops))
+			oklchBuf := make([]oklchStop, len(capturedStops))
 			fn = func(ctx ColorContext) tcell.Color {
-				resolved := resolveStops(capturedStops, ctx)
+				resolved := resolveStopsInto(capturedStops, ctx, sortBuf, oklchBuf)
 				nx, ny := normalizedCoords(ctx, source)
 				dx := nx - float64(cx)
 				dy := ny - float64(cy)
 				t := math.Sqrt(dx*dx+dy*dy) * 2
-				t = clampFloat(t, 0, 1)
+				if t < 0 {
+					t = 0
+				} else if t > 1 {
+					t = 1
+				}
 				return interpolateStops(resolved, t)
 			}
 		} else {
@@ -193,7 +209,11 @@ func (gb GradientBuilder) Build() DynamicColor {
 				dx := nx - float64(cx)
 				dy := ny - float64(cy)
 				t := math.Sqrt(dx*dx+dy*dy) * 2
-				t = clampFloat(t, 0, 1)
+				if t < 0 {
+					t = 0
+				} else if t > 1 {
+					t = 1
+				}
 				return interpolateStops(static, t)
 			}
 		}
@@ -234,6 +254,23 @@ func resolveStops(stops []ColorStop, ctx ColorContext) []oklchStop {
 		out[i] = oklchStop{L: l, C: ch, H: h, position: float64(s.Position), rgb: c}
 	}
 	return out
+}
+
+// resolveStopsInto resolves DynamicColor stops into pre-allocated buffers.
+func resolveStopsInto(stops []ColorStop, ctx ColorContext, sorted []ColorStop, out []oklchStop) []oklchStop {
+	copy(sorted, stops)
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].Position < sorted[j].Position
+	})
+	for i, s := range sorted {
+		c := s.Color
+		if !s.Dynamic.IsZero() {
+			c = s.Dynamic.Resolve(ctx)
+		}
+		l, ch, h := TcellToOKLCH(c)
+		out[i] = oklchStop{L: l, C: ch, H: h, position: float64(s.Position), rgb: c}
+	}
+	return out[:len(stops)]
 }
 
 // prepareStops converts static ColorStops to oklchStops, sorted by position.
