@@ -1,6 +1,6 @@
 module github.com/framegrace/texelui
 
-go 1.24.3
+go 1.25.0
 
 require github.com/gdamore/tcell/v2 v2.13.8
 
@@ -10,5 +10,5 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/term v0.37.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 )
