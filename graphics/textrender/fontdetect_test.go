@@ -1,6 +1,9 @@
 package textrender
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 func TestParseGhosttyConfig(t *testing.T) {
 	config := `
@@ -53,5 +56,24 @@ background #1e1e2e
 	got := parseKittyFont(config)
 	if got != "" {
 		t.Errorf("parseKittyFont = %q, want empty string", got)
+	}
+}
+
+func TestDetectFont_Integration(t *testing.T) {
+	path, err := DetectFont()
+	if err != nil {
+		t.Skipf("DetectFont() not available in this environment: %v", err)
+	}
+	if path == "" {
+		t.Fatal("DetectFont() returned empty path")
+	}
+	t.Logf("Detected font: %s", path)
+
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("font file not accessible: %v", err)
+	}
+	if info.Size() == 0 {
+		t.Fatal("font file is empty")
 	}
 }

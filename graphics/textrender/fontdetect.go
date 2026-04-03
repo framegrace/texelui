@@ -21,7 +21,8 @@ func parseGhosttyFont(config string) string {
 		}
 		key := strings.TrimSpace(parts[0])
 		if key == "font-family" {
-			return strings.TrimSpace(parts[1])
+			val := strings.TrimSpace(parts[1])
+			return strings.Trim(val, `"'`)
 		}
 	}
 	return ""
