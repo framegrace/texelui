@@ -855,11 +855,19 @@ func (u *UIManager) invalidateAllLocked() {
 	u.requestRefreshLocked()
 }
 
-// Internal helper - assumes dirtyMu is held
+// Internal helper - assumes dirtyMu is held.
+// Recovers from send on closed channel (can happen when the notifier owner
+// closes the channel while a background goroutine is still running).
 func (u *UIManager) requestRefreshLocked() {
 	if u.notifier == nil {
 		return
 	}
+	defer func() {
+		if r := recover(); r != nil {
+			// Channel was closed — nil it out to avoid future panics.
+			u.notifier = nil
+		}
+	}()
 	select {
 	case u.notifier <- true:
 	default:
