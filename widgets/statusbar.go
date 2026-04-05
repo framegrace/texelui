@@ -493,12 +493,17 @@ func (s *StatusBar) invalidate() {
 		inv(s.Rect)
 	}
 
-	// Also trigger refresh notifier if available
+	// Also trigger refresh notifier if available.
+	// Recover from send on closed channel — can happen when the app is
+	// shutting down while the StatusBar ticker goroutine is still running.
 	if notifier != nil {
-		select {
-		case notifier <- true:
-		default:
-		}
+		func() {
+			defer func() { recover() }()
+			select {
+			case notifier <- true:
+			default:
+			}
+		}()
 	}
 }
 
